@@ -4,7 +4,6 @@ import math
 import matplotlib.pyplot as plt
 
 from geometry import max_area, cyclic_intersection_pts
-from djikstra import djikstra_algo
 
 
 class ArucoVision:
@@ -39,19 +38,19 @@ class ArucoVision:
             input:      None
             output:     picture taken by the camera
         """
-        # cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
 
-        # # Check if camera opened successfully
-        # if not cap.isOpened():
-        #     print("Error opening video stream")
+        # Check if camera opened successfully
+        if not cap.isOpened():
+            print("Error opening video stream")
 
-        # # Getting a first frame for the width and height of the plot
-        # ret, frame = cap.read()
+        # Getting a first frame for the width and height of the plot
+        ret, frame = cap.read()
+        
+        # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
 
-        frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
-
-        # cv2.imwrite('input/frame.png', frame)
-        # cap.release()
+        cv2.imwrite('input/frame.png', frame)
+        cap.release()
         self.img = frame.copy()
 
     def image_processing(self):
@@ -96,6 +95,7 @@ class ArucoVision:
         mask = np.zeros((img.shape),np.uint8)
         cv2.drawContours(mask,[best_cnt],0,255,-1)
         cv2.drawContours(mask,[best_cnt],0,0,2)
+        cv2.imwrite('intermediate/mask.png', mask)
 
         self.mask = mask.copy()
 
@@ -119,10 +119,12 @@ class ArucoVision:
         img1 = self.mask.copy()
         ret,thresh = cv2.threshold(img1,127,255,0)
 
+        
         contours,_ = cv2.findContours(thresh, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         cnt = max_area(contours)
-        cv2.drawContours(img1, cnt, 0, (0, 255, 0), 10)
-        cv2.imwrite('intermediate/contour.png', img1)
+        img_cnt = self.img.copy()
+        cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 20)
+        cv2.imwrite('intermediate/contour.png', img_cnt)
 
 
         # compute rotated rectangle (minimum area)
@@ -130,10 +132,10 @@ class ArucoVision:
         (x, y), (w, h), angle = rect
         box = cv2.boxPoints(rect)
         box = np.int0(box)
-        print(box)
+      
 
-        min_rect = self.mask.copy()
-        min_rect = cv2.drawContours(min_rect,[box],0,(0,255,0),2)
+        min_rect = self.img.copy()
+        cv2.drawContours(min_rect,[box],0,(0,255,0),20)
         cv2.imwrite('intermediate/minRect.png', min_rect)
 
         # Sorts the 4 points clockwise
@@ -155,16 +157,27 @@ class ArucoVision:
                     if d < min_dist:
                         min_dist = d
                         pts_mask[r] = hull_list[k][j][0]
-
+        """
+        pts_mask[0] = pts_mask[0] + np.array([-20,-20])
+        pts_mask[1] = pts_mask[1] + np.array([20,-20])
+        pts_mask[2] = pts_mask[2] + np.array([20,20])
+        pts_mask[3] = pts_mask[3] + np.array([-20,20])
+        """
         # List the output points in the same order as input
         # Top-left, top-right, bottom-right, bottom-left
-        dstPts = [[0, 0], [w, 0], [w, h], [0, h]]
+        if w > h:
+            width = w
+            height = h
+        else:
+            width = h
+            height = w
+        dstPts = [[0, 0], [width, 0], [width, height], [0, height]]
 
         # Get the transform
         m = cv2.getPerspectiveTransform(np.float32(pts_mask), np.float32(dstPts))
         self.transform = m
-        self.width = w
-        self.height = h
+        self.width = width
+        self.height = height
 
     def apply_transform(self):
         """
@@ -173,7 +186,7 @@ class ArucoVision:
         """
         # transform the image
         out = self.img_mask.copy()
-        out = cv2.warpPerspective(self.img_mask, self.transform, (int(self.width), int(self.height)))
+        out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
         self.img_final = out
 
     def create_grid(self, error = 0):
@@ -212,7 +225,7 @@ class ArucoVision:
             Call it only once per simulation
         """
         self.take_picture()
-        self.image_processing()
+        self.image_processing()     
         self.create_mask()
         self.apply_mask()
         self.create_transform()
@@ -230,11 +243,11 @@ class ArucoVision:
         return math.degrees(alpha)
 
 
-    def mark(self):
+    def aruco(self):
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
 
         # Apply thresholding
-        ret, thresh = cv2.threshold(img,100,255,cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
 
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
@@ -263,13 +276,13 @@ class ArucoVision:
             cX = (int)(middle[0] / self.cellx)
 
 
-            cY = (int)(middle[1]/self.celly)
+            cY = (int)(middle[1]/self.celly)    
 
 
             return (cX,cY)
 
     def coordinates(self):
-        corners, ids = self.mark()
+        corners, ids = self.aruco()
         print('coordinates')
         for c in range(0, len(corners)):
             centre = 0
@@ -277,13 +290,13 @@ class ArucoVision:
                 centre += corners[c][0][i]
             centre = centre / 4
             print(centre)
-            if ids[c][0] == 1: #thymio
+            if ids[c][0] == 2: #thymio
                 self.thymio_position = self.compute_coordinates(centre)
-                self.thymio_orientation = self.compute_orientation(corners[c][0][1], corners[c][0][2])
+                self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
                 m_cell0 = ((self.thymio_position[0] - 0.5)*self.cellx, (self.thymio_position[1] - 0.5)*self.celly)
-                self.thymio_deviation = (middle_rb[0] - m_cell0[0], middle_rb[1] - middle_rb[1])
+                self.thymio_deviation = (centre[0] - m_cell0[0], centre[1] - m_cell0[1])
 
-            if ids[c][0] == 2: #goal
+            if ids[c][0] == 1: #goal
                 self.goal_position = self.compute_coordinates(centre)
 
 
