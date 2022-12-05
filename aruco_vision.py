@@ -269,7 +269,7 @@ class ArucoVision:
             return (cX,cY)
 
     def coordinates(self):
-        corners, ids = mark()
+        corners, ids = self.mark()
         print('coordinates')
         for c in range(0, len(corners)):
             centre = 0

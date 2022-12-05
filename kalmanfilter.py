@@ -7,7 +7,7 @@ class KalmanFilter(object):
         self.E = np.matrix([[point[0]],   #position in x from the camera
                             [point[1]]])  #position in y from the camera
 
-        self.A = np.eye(2).astype(int)
+        self.A = np.diag([1, 1])
         self.B = dt * self.A
         self.H = self.A
         self.Q = self.A
@@ -24,14 +24,14 @@ class KalmanFilter(object):
 
         self.inner_strip_width  = 47
         self.outer_strip_width = 4
-        self.compute_Q(self, q_cam, q_gnd)
-        self.compute_R(self, r_cam, r_gnd)
+        self.compute_Q(q_cam, q_gnd)
+        self.compute_R(r_cam, r_gnd)
 
 
     def compute_Q(self, q_cam, q_gnd): 
-        #####################################################
-        # q_cam : 2x1 vector of variance of position state for the camera
-        # q_gnd : 2x1 vector of variance of position state for the gnd_sensor
+        ##################################################### REECRIRE LES DEFINITION ET REVOIR CHAQUE Q ET R
+        # q_cam : value of variance of position state for the camera
+        # q_gnd : value of variance of position state for the gnd_sensor
         #####
         # Defines the matrix R from the values q1 and q2 computed for calibration
         #####################################################
@@ -41,8 +41,8 @@ class KalmanFilter(object):
 
     def compute_R(self, r_cam, r_gnd):
         #####################################################
-        # r_cam : 2x1 vector of variance of position measurement for the camera
-        # r_gnd : 2x1 vector of variance of position measurement for the gnd_sensor
+        # r_cam : value of variance of position measurement for the camera
+        # r_gnd : value of variance of position measurement for the gnd_sensor
         #####
         # Defines the matrix R from the values r1 and r2 computed for calibration
         #####################################################
@@ -66,13 +66,13 @@ class KalmanFilter(object):
         # the state estimation vector and the covariance estimation vector
         #####################################################
 
-        self.predict(self, speed)
+        self.predict(speed)
         if(isCamOn == 1):
             #camera is on: we will use it as it provides a better overview
-            self.updateWithCam(self, pos_from_cam)
+            self.updateWithCam(pos_from_cam)
         else:
             #camera is off: we now rely on ground sensor
-            self.updateWithGnd(self, pos_from_cam, direction, gnd, gnd_prev, transition_threshold)
+            self.updateWithGnd(pos_from_cam, direction, gnd, gnd_prev, transition_threshold)
         
         S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
