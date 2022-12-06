@@ -20,6 +20,8 @@ class Vision:
         self.height = None
 
         self.offset = 0
+        self.conversion_factor_x = None
+        self.conversion_factor_y = None
 
         self.rows = 6
         self.columns = 9
@@ -29,6 +31,7 @@ class Vision:
         self.thymio_position = None
         self.thymio_orientation = None
         self.thymio_deviation = None
+        self.thymio_real_pos = None
         self.goal_position = None
 
         self.occupancy_grid()
@@ -238,6 +241,9 @@ class Vision:
         self.apply_transform()
         self.create_grid()
 
+        self.conversion_factor_x = 125/self.cellx           #à changer le 125
+        self.conversion_factor_y = 125/self.celly
+
     def orientation(self, point1, point2):
         """
             input: two points on the image
@@ -263,7 +269,7 @@ class Vision:
 
     def compute_coordinates(self, middle):
             cX = (int)((middle[0] - self.offset) / self.cellx)
-            cY = (int)((middle[1] - self.offset)/self.celly)    
+            cY = (int)((middle[1] - self.offset)/self.celly)   
             return (cX,cY)
 
     def coordinates(self):
@@ -276,8 +282,13 @@ class Vision:
             if ids[c][0] == 2: #thymio
                 self.thymio_position = self.compute_coordinates(centre)
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
-                m_cell0 = ((self.thymio_position[0] - 0.5)*self.cellx, (self.thymio_position[1] - 0.5)*self.celly)
-                self.thymio_deviation = (centre[0] - m_cell0[0], centre[1] - m_cell0[1])
+                m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
+                self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
+                h = self.img_final.shape[0]
+                print(m_cell)
+                print(centre)
+                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(h - centre[1]))
+                self.thymio_real_pos = centre
 
             if ids[c][0] == 1: #goal
                 self.goal_position = self.compute_coordinates(centre)

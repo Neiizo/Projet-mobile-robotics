@@ -77,6 +77,7 @@ class KalmanFilter(object):
         S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
         self.E = self.E + np.dot(K, self.i)
+        print("tadaaaa", self.E)
         self.P = self.P - np.dot(K, np.dot(self.H, self.P))
         return self.E
 
@@ -87,7 +88,7 @@ class KalmanFilter(object):
         # Updates the state estimation vector aswell as the state covariance vector
         #####################################################
 
-        u = speed*self.speed_to_mms
+        u = speed * self.speed_to_mms
         # State estimation
         self.E = np.dot(self.A, self.E) + np.dot(self.B, u) 
         # Calcul de la covariance de l'erreur

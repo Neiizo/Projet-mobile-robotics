@@ -23,13 +23,13 @@ def motors(node, left, right):
     aw(node.set_variables(v))
 
 def get_turn(x,y,orientation):
-    if x==1 and y==0:
+    if((x==1) & (y==0)):
         dir = 0
-    elif x==0 and y==-1:
+    elif((x==0) & (y==-1)):
         dir = 1
-    elif x==-1 and y==0:
+    elif((x==-1) & (y==0)):
         dir = 2
-    elif x==0 and y==1:
+    elif((x==0) & (y==-1)):
         dir = 3
     else:
         dir = orientation
@@ -42,6 +42,8 @@ def get_turn(x,y,orientation):
 def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation):
    x_mm = dx*125-kalman_pos_x
    y_mm = dy*125-kalman_pos_y
+   print(y_mm)
+   print(x_mm)
    if (orientation == 0 or orientation == 2):
       turn = get_turn(0,np.sign(y_mm),orientation)
       adjust_turn = turn*(y_mm)
@@ -50,7 +52,6 @@ def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation):
       turn = get_turn(np.sign(x_mm),0,orientation)
       adjust_turn = turn*(x_mm)
       adjust_speed = -y_mm*np.sign(orientation-2)
-   print("adjust turn = ",adjust_turn, "adjust speed = ", adjust_speed)
    return adjust_turn,adjust_speed
 
 
