@@ -6,13 +6,11 @@ import matplotlib.pyplot as plt
 from geometry import max_area, cyclic_intersection_pts
 
 
-class ArucoVision:
-    lower_range = np.array([[0,0,150], [100,150,100], [100, 80, 0]]) #RGB
-    upper_range = np.array([[120,120,255], [160,255,160], [255, 150, 80]]) #RGB
+class Vision:
 
     def __init__(self):
-        self.img = None
-        self.p_img = None
+        self.img = None # original image taken by camera
+        self.p_img = None # processed image
         self.mask = None
         self.img_mask = None
         self.img_final = None #image resized and cropped with or without thymio
@@ -20,6 +18,8 @@ class ArucoVision:
         self.transform = None
         self.width = None
         self.height = None
+
+        self.offset = 0
 
         self.rows = 6
         self.columns = 9
@@ -46,6 +46,8 @@ class ArucoVision:
 
         # Getting a first frame for the width and height of the plot
         ret, frame = cap.read()
+        if(frame is None):
+            print("oopsy")
         
         # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
 
@@ -72,6 +74,7 @@ class ArucoVision:
 
         # Apply thresholding
         thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 5)
+        cv2.imwrite('intermediate/processedImage.png', thresh)
 
         self.p_img = thresh.copy()
 
@@ -107,6 +110,7 @@ class ArucoVision:
 
         out = np.zeros_like(self.img)
         out[self.mask == 255] = self.img[self.mask == 255]
+        cv2.imwrite('intermediate/maskOnImage.png', out)
         self.img_mask = out
 
 
@@ -157,12 +161,12 @@ class ArucoVision:
                     if d < min_dist:
                         min_dist = d
                         pts_mask[r] = hull_list[k][j][0]
-        """
-        pts_mask[0] = pts_mask[0] + np.array([-20,-20])
-        pts_mask[1] = pts_mask[1] + np.array([20,-20])
-        pts_mask[2] = pts_mask[2] + np.array([20,20])
-        pts_mask[3] = pts_mask[3] + np.array([-20,20])
-        """
+
+        pts_mask[0] = pts_mask[0] + np.array([-self.offset,-self.offset])
+        pts_mask[1] = pts_mask[1] + np.array([self.offset,-self.offset])
+        pts_mask[2] = pts_mask[2] + np.array([self.offset,self.offset])
+        pts_mask[3] = pts_mask[3] + np.array([-self.offset,self.offset])
+
         # List the output points in the same order as input
         # Top-left, top-right, bottom-right, bottom-left
         if w > h:
@@ -187,6 +191,7 @@ class ArucoVision:
         # transform the image
         out = self.img_mask.copy()
         out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
+        cv2.imwrite('output/transformedImage.png', out)
         self.img_final = out
 
     def create_grid(self, error = 0):
@@ -199,6 +204,7 @@ class ArucoVision:
         # Apply a threshold to the image
         t = 100
         ret, thresh1 = cv2.threshold(self.img_final,t,255,cv2.THRESH_BINARY)
+        cv2.imwrite('intermediate/thresh.png', thresh1)
 
         # Computes size of a cell in the image [pixels]
         h,w,c = self.img_final.shape
@@ -212,7 +218,7 @@ class ArucoVision:
         # For each cell, compute the mean value of pixels, if bigger than threshold --> white
         for k in range(0, self.rows):
             for j in range(0, self.columns):
-                cell = thresh1[(k*self.celly + error):((k+1)*self.celly + error), (j*self.cellx + error):((j+1)*self.cellx + error)]
+                cell = thresh1[(k*self.celly + error + self.offset):((k+1)*self.celly + error + self.offset), (j*self.cellx + error + self.offset):((j+1)*self.cellx + error + self.offset)]
                 m = np.average(cell)
                 if m > t:
                     data[k, j] = 0
@@ -240,7 +246,7 @@ class ArucoVision:
         dX = point2[0] - point1[0]
         dY = point2[1] - point1[1]
         alpha = math.atan2(dX,dY)
-        return math.degrees(alpha)
+        return math.degrees(alpha%360)
 
 
     def aruco(self):
@@ -256,40 +262,17 @@ class ArucoVision:
         return corners,ids
 
     def compute_coordinates(self, middle):
-
-            """
-            for i in range(1, self.columns):
-                if middle[0] <= (i * self.cellx) and middle[0] >= ((i-1)*self.cellx):
-                    cX = i-1
-                    break
-
-
-            # Y coordinate
-            cY = 0
-            for k in range(1, self.rows):
-                if middle[1] <= (k * self.celly) and middle[1] >= ((k-1)*self.celly):
-                    cY = k-1
-                    break
-            """
-
-
-            cX = (int)(middle[0] / self.cellx)
-
-
-            cY = (int)(middle[1]/self.celly)    
-
-
+            cX = (int)((middle[0] - self.offset) / self.cellx)
+            cY = (int)((middle[1] - self.offset)/self.celly)    
             return (cX,cY)
 
     def coordinates(self):
         corners, ids = self.aruco()
-        print('coordinates')
         for c in range(0, len(corners)):
             centre = 0
             for i in range(0, 4):
                 centre += corners[c][0][i]
             centre = centre / 4
-            print(centre)
             if ids[c][0] == 2: #thymio
                 self.thymio_position = self.compute_coordinates(centre)
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
@@ -304,7 +287,6 @@ class ArucoVision:
         """
             Updates the occupancy_grid based based on the new image
         """
-        print('update')
         self.take_picture()
         self.apply_mask()
         self.apply_transform()
