@@ -55,5 +55,27 @@ def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation):
    return adjust_turn,adjust_speed
 
 
+def robot_turn(signturn, SPEED , speed_conversion, node, client):
+    turn_duration2 = 55 / (SPEED * speed_conversion)
+    turn_duration1 = 20 / (SPEED * speed_conversion)
+    if signturn > 0:
+        mc.motors(node, 20, 100)
+        aw(client.sleep(turn_duration2)) #changer ca pour le tour
+        mc.motors(node, -120, 50)
+        aw(client.sleep(turn_duration2)) #changer ca pour le tour
+        mc.motors(node, -60, -60)
+        aw(client.sleep(turn_duration1)) #changer ca pour le tour
+        mc.motors(node, 0, 0)
+    elif signturn < 0:
+        mc.motors(node, 100, 20)
+        aw(client.sleep(turn_duration2)) #changer ca pour le tour
+        mc.motors(node,50, -120)
+        aw(client.sleep(turn_duration2)) #changer ca pour le tour
+        mc.motors(node, -60, -60)
+        aw(client.sleep(turn_duration1)) #changer ca pour le tour
+        mc.motors(node, 0, 0)
+    else:
+        mc.motors(node, 0, 0)
+
 
 #motors(0, 0, verbose=True)   

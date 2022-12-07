@@ -56,8 +56,8 @@ class KalmanFilter(object):
         #####################################################
         # isCamOn               : bool representing wether the webcam is available or not
         # pos_from_cam          : 2x1 vector giving the position of the robot, from the webcam in [mm]
-        # direction             : Character chain defining what direction the thymio is supposed to follow ( XXXXXXXXX )
-        # speed                 : 2x1 vector giving the speed of the thymio, from the thymio's sensor. In [mm/s]
+        # direction             : Character chain defining what direction the thymio is supposed to follow (0, 1, 2 or 3)
+        # speed                 : 2x1 vector giving the speed of the thymio, from the thymio's sensor.
         # gnd                   : value from the ground sensor of the thymio
         # gnd_prev              : value from the ground sensor of the thymio from last's itteration
         # transition_threshold  : value of the threshold at which we consider we crossed a line or not

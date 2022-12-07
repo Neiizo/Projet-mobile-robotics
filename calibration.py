@@ -2,10 +2,11 @@ from tdmclient import aw
 import time
 import numpy as np
 import Motion_control as mc
+import aruco_vision as av
 
 
 # REFORMULER POUR AVOIR UNE CLASSE ?
-def calibration_mm(node, Ts, thymio_data, LINE_LENGTH, TRANSITION_THRESHOLD, q_nu, speed_conversion, client, SPEED):
+def calibration_mm(node, Ts, thymio_data, LINE_LENGTH, TRANSITION_THRESHOLD, client, SPEED_X, SPEED_Y):
     timerStarted = False
     iter = 0
     startIter = 0
@@ -13,7 +14,7 @@ def calibration_mm(node, Ts, thymio_data, LINE_LENGTH, TRANSITION_THRESHOLD, q_n
     start = 0
     end = 0
 
-    mc.motors(node, SPEED+1, SPEED)
+    mc.motors(node, SPEED_X, SPEED_Y)
     while(onLine == True):
         aw(node.wait_for_variables())
         get_data(thymio_data, node)
@@ -33,7 +34,7 @@ def calibration_mm(node, Ts, thymio_data, LINE_LENGTH, TRANSITION_THRESHOLD, q_n
             mc.motors(node,0,0)
             aw(client.sleep(Ts))
             onLine = False
-            q_nu, speed_conversion = compute_data(LINE_LENGTH, start, end, startIter, thymio_data, SPEED)
+            q_nu, speed_conversion = compute_data(LINE_LENGTH, start, end, startIter, thymio_data, SPEED_X)
         iter = iter + 1
 
     return q_nu, speed_conversion
@@ -54,3 +55,24 @@ def compute_data(LINE_LENGTH, start, end, startIter, thymio_data, SPEED):
     print(f"With a desired speed of : {SPEED}, the thymio speed is : {speed_mms} mm/s")
     print(f"The standard deviation from the speed state (q_nu) and speed measurement (r_nu) is : {q_nu} ")
     return q_nu, speed_conversion
+
+def cam_calibration(calibrated):
+    if (calibrated != 1):
+        r_nu = 3.1773380067632053
+        speed_conversion = 0.3210733473116764 
+        Ts = 0.01
+        TRANSITION_THRESHOLD = 400
+        SPEED_X = 101
+        SPEED_Y = 100
+        q_nu = r_nu
+    vision = av.Vision()
+    r_p_cam = 1 # a enlever une fois calculé
+    q_p_cam = 1 # a enlever une fois calculé
+    Q_cam = np.array([q_nu, q_p_cam])
+    R_cam = np.array([q_nu, r_p_cam])
+    r_p_gnd = 0.25 
+    q_p_gnd = 0.04
+
+    Q_gnd = np.array([q_nu, q_p_gnd])
+    R_gnd = np.array([q_nu, r_p_gnd])
+    return vision, Q_cam, R_cam, Q_gnd, R_gnd, SPEED_X, SPEED_Y, TRANSITION_THRESHOLD, Ts, speed_conversion
