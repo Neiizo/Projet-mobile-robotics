@@ -8,7 +8,7 @@ from geometry import max_area, cyclic_intersection_pts
 
 class Vision:
 
-    def __init__(self):
+    def __init__(self, threshold = 200):
         self.img = None # original image taken by camera
         self.p_img = None # processed image
         self.mask = None
@@ -33,6 +33,7 @@ class Vision:
         self.thymio_deviation = None
         self.thymio_real_pos = None
         self.goal_position = None
+        self.threshold = threshold
 
         self.occupancy_grid()
 
@@ -51,10 +52,11 @@ class Vision:
         ret, frame = cap.read()
         if(frame is None):
            print("oopsy")
-        
         # frame = cv2.imread('input/frame3.png', cv2.IMREAD_COLOR)
-
+        
         cv2.imwrite('input/frame.png', frame)
+
+
         cap.release()
         self.img = frame.copy()
 
@@ -65,12 +67,15 @@ class Vision:
         """
 
         # Normalize the image manage lightning
-        img_norm = np.zeros_like(self.img)
-        img_norm = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
+        # img_norm = np.zeros_like(self.img)
+        # img_norm = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
+
+        # Decrease brightness
+        img = self.decrease_brightness(self.img, 10)
 
         # Blur the image to denoise: GaussianBlur
         kernel_size = 5
-        blur = cv2.GaussianBlur(img_norm, (kernel_size, kernel_size), 0)
+        blur = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
         # Convert to B&W
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
@@ -82,6 +87,18 @@ class Vision:
 
         self.p_img = thresh.copy()
 
+    def decrease_brightness(self, img, value):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(hsv)
+        
+        lim = 255-value
+        v[v > lim]  = 255
+        v[v <= lim] += value
+
+        final_hsv = cv2.merge((h,s,v))
+        img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        return img
+
     def create_mask(self):
         """
             input:      the image to resize according to the biggest contour
@@ -91,7 +108,6 @@ class Vision:
         """
 
         img = self.p_img
-
         # Find the contours
         contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -196,6 +212,13 @@ class Vision:
         out = self.img_mask.copy()
         out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
         cv2.imwrite('output/transformedImage.png', out)
+        
+        # image = cv2.imread('output/transformedImage.png')
+        # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # value = 20 #whatever value you want to add
+        # cv2.subtract(hsv[:,:,2], value, hsv[:,:,2])
+        # image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        # cv2.imwrite('output/frame2.png', image)
         self.img_final = out
 
     def create_grid(self, error = 0):
@@ -206,7 +229,7 @@ class Vision:
         """
 
         # Apply a threshold to the image
-        t = 150
+        t = self.threshold
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
         ret, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/thresh.png', thresh1)
@@ -272,7 +295,10 @@ class Vision:
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
 
         # Apply thresholding
-        ret, thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
+        cv2.imwrite('intermediate/arucotest.png',thresh)
+        
+
 
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
