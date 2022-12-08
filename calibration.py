@@ -26,15 +26,15 @@ class data(object):
             if(self.speed_conversion != 0):
                 print("########################")
                 print("r_nu and q_nu will be computed")
-                print("########################")#ajouter des retour à la lignes
+                print("#\n#\n#\n#\n")#ajouter des retour à la lignes
             elif(self.r_nu != 0):
                 print("########################")
                 print("speed_conversion will be computed")
-                print("########################")
+                print("#\n#\n#\n#\n")
             else:
                 print("########################")
                 print("speed_conversion, r_nu and q_nu will be computed")
-                print("########################")
+                print("#\n#\n#\n#\n")
             timerStarted = False
             iter = 0
             startIter = 0
@@ -106,8 +106,8 @@ class data(object):
             self.q_nu = self.r_nu
         threshold = 200 # faire fct pour calibrer ce machin
         vision = av.Vision(threshold)
-        r_p_cam = 1 # a enlever une fois calculé
-        q_p_cam = 1 # a enlever une fois calculé
+        r_p_cam = 1 
+        q_p_cam = 1 
         Q_cam = np.array([self.q_nu, q_p_cam])
         R_cam = np.array([self.q_nu, r_p_cam])
         r_p_gnd = 0.25 

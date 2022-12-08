@@ -8,32 +8,36 @@ from geometry import max_area, cyclic_intersection_pts
 
 class Vision:
 
-    def __init__(self, threshold = 200):
-        self.img = None # original image taken by camera
-        self.p_img = None # processed image
-        self.mask = None
-        self.img_mask = None
-        self.img_final = None #image resized and cropped with or without thymio
+    def __init__(self, threshold = 150):
 
-        self.transform = None
-        self.width = None
-        self.height = None
+        self.threshold = threshold      # threshold depending on the lightning
 
-        self.offset = 0
-        self.conversion_factor_x = None
-        self.conversion_factor_y = None
+        self.img = None             # original image taken by camera
+        self.p_img = None           # processed image
+        self.mask = None            # mask that covers the background
+        self.img_mask = None        # image without the background
+        self.img_final = None       # image resized and cropped with or without thymio
 
-        self.rows = 6
+        self.transform = None       # transform that allows resize and unskrew the original image
+        self.width = None           # width of the image
+        self.height = None           # height of the image
+
+        self.offset = 15                    #offset to apply in order not to cut the robots on the border
+        self.conversion_factor_x = None     # pixel to mm in x
+        self.conversion_factor_y = None     # pixel to mm in y
+
+        self.rows = 6 
         self.columns = 9
-        self.cellx = None
-        self.celly = None
-        self.grid = None
-        self.thymio_position = None
-        self.thymio_orientation = None
-        self.thymio_deviation = None
-        self.thymio_real_pos = None
-        self.goal_position = None
-        self.threshold = threshold
+        self.cellx = None       # number of pixel in x corresponding to a cell
+        self.celly = None       # number of pixel in y corresponding to a cell
+        self.grid = None        # occupancy grid
+
+        self.thymio_position = None         # thymio's position in the grid
+        self.thymio_orientation = None      # thymio's orientation (in deg, trigonometric)
+        self.thymio_deviation = None        # distance (mm) from center of cell
+        self.thymio_real_pos = None         # position in the grid in mm 
+        self.goal_position = None           # goal's position in the grid
+        
 
         self.occupancy_grid()
 
@@ -150,6 +154,12 @@ class Vision:
         cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 10)
         cv2.imwrite('intermediate/contour.png', img_cnt)
 
+        # Convex hull
+        hull_list = []
+        for i in range(len(contours)):
+            hull = cv2.convexHull(contours[i])
+            hull_list.append(hull)
+
 
         # compute rotated rectangle (minimum area)
         rect = cv2.minAreaRect(cnt)
@@ -164,12 +174,6 @@ class Vision:
 
         # Sorts the 4 points clockwise
         rect_pts = cyclic_intersection_pts(box)
-
-        # Convex hull
-        hull_list = []
-        for i in range(len(contours)):
-            hull = cv2.convexHull(contours[i])
-            hull_list.append(hull)
 
         # For each of the 4 points in rect_pts, we check which one is closest in hull_list
         pts_mask = np.zeros(shape=(4, 2))
@@ -288,7 +292,7 @@ class Vision:
         dX = point2[0] - point1[0]
         dY = point2[1] - point1[1]
         alpha = math.atan2(dX,dY)
-        return math.degrees(alpha%360)
+        return (math.degrees(alpha)%360)
 
 
     def aruco(self):
@@ -297,9 +301,6 @@ class Vision:
         # Apply thresholding
         ret, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/arucotest.png',thresh)
-        
-
-
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
         arucoParams = cv2.aruco.DetectorParameters_create()
@@ -327,13 +328,10 @@ class Vision:
                 m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
                 h = self.img_final.shape[0]
-                print(m_cell)
-                print("Thymio's center: ", centre)
-                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(h - centre[1]))
-                self.thymio_real_pos = centre
+                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(centre[1]))
+                self.thymio_real_pos = np.array([[centre[0]], [centre[1]]])
 
             if ids[c][0] == 1: #goal
-                print("Goal's center: ", centre)
                 self.goal_position = self.compute_coordinates(centre)
 
 

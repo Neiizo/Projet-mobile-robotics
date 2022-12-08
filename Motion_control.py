@@ -5,7 +5,7 @@ from tdmclient import aw
 
 
 def correct_orientation(orientation):
-    if((orientation > 60) & (orientation < 120)):
+    if((orientation > 60) & (orientation < 120)): #a mettre avec des defines et une margin
         return 1
     elif((orientation > 150) & (orientation < 210)):
         return 2
@@ -65,7 +65,7 @@ def robot_turn(signturn, SPEED , speed_conversion, node, client):
         aw(client.sleep(turn_duration2)) #changer ca pour le tour
         motors(node, -60, -60)
         aw(client.sleep(turn_duration1)) #changer ca pour le tour
-        mc.motors(node, 0, 0)
+        motors(node, 0, 0)
     elif signturn < 0:
         motors(node, 100, 20)
         aw(client.sleep(turn_duration2)) #changer ca pour le tour

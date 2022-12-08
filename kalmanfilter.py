@@ -4,8 +4,7 @@ import numpy as np
 class KalmanFilter(object):
     def __init__(self, dt, point, speed_to_mms, q_cam, q_gnd, r_cam, r_gnd):
         self.dt = dt
-        self.E = np.matrix([[point[0]],   #position in x from the camera
-                            [point[1]]])  #position in y from the camera
+        self.E = point #position in x and y from the camera
 
         self.A = np.diag([1, 1])
         self.B = dt * self.A
@@ -77,7 +76,6 @@ class KalmanFilter(object):
         S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
         self.E = self.E + np.dot(K, self.i)
-        print("tadaaaa", self.E)
         self.P = self.P - np.dot(K, np.dot(self.H, self.P))
         return self.E
 
