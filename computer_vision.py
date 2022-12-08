@@ -8,9 +8,10 @@ from geometry import max_area, cyclic_intersection_pts
 
 class Vision:
 
-    def __init__(self, threshold = 150):
+    def __init__(self, threshold = 180):
 
         self.threshold = threshold      # threshold depending on the lightning
+        self.isCamOn = True
 
         self.img = None             # original image taken by camera
         self.p_img = None           # processed image
@@ -22,7 +23,7 @@ class Vision:
         self.width = None           # width of the image
         self.height = None           # height of the image
 
-        self.offset = 15                    #offset to apply in order not to cut the robots on the border
+        self.offset = 10                    #offset to apply in order not to cut the robots on the border
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
@@ -32,6 +33,8 @@ class Vision:
         self.celly = None       # number of pixel in y corresponding to a cell
         self.grid = None        # occupancy grid
 
+        self.thymio = False                 # Whether the Thymio robot was detected in the image
+        self.goal = False                   # Whether the goal was detected in the image
         self.thymio_position = None         # thymio's position in the grid
         self.thymio_orientation = None      # thymio's orientation (in deg, trigonometric)
         self.thymio_deviation = None        # distance (mm) from center of cell
@@ -46,22 +49,27 @@ class Vision:
             input:      None
             output:     picture taken by the camera
         """
-        cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
+        # cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
 
-        # Check if camera opened successfully
-        if not cap.isOpened():
-           print("Error opening video stream")
+        # # Check if camera opened successfully
+        # if not cap.isOpened():
+        #    self.isCamOn = False
+            # print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "could not open the video stream.")
 
         # Getting a first frame for the width and height of the plot
-        ret, frame = cap.read()
-        if(frame is None):
-           print("oopsy")
-        # frame = cv2.imread('input/frame3.png', cv2.IMREAD_COLOR)
+        # ret, frame = cap.read()
         
-        cv2.imwrite('input/frame.png', frame)
+        # if(not ret):
+        #    self.isCamOn = False
+        #    print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + " cannot receive frame.")
+        # else:
+        #     self.isCamOn = True
 
+        frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
+        
+        # cv2.imwrite('input/frame.png', frame)
 
-        cap.release()
+        # cap.release()
         self.img = frame.copy()
 
     def image_processing(self):
@@ -71,11 +79,11 @@ class Vision:
         """
 
         # Normalize the image manage lightning
-        # img_norm = np.zeros_like(self.img)
-        # img_norm = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
+        img = np.zeros_like(self.img)
+        img = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
 
         # Decrease brightness
-        img = self.decrease_brightness(self.img, 10)
+        # img = self.decrease_brightness(self.img, 10)
 
         # Blur the image to denoise: GaussianBlur
         kernel_size = 5
@@ -151,7 +159,7 @@ class Vision:
         contours,_ = cv2.findContours(thresh, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         cnt = max_area(contours)
         img_cnt = self.img.copy()
-        cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 10)
+        cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 5)
         cv2.imwrite('intermediate/contour.png', img_cnt)
 
         # Convex hull
@@ -216,13 +224,6 @@ class Vision:
         out = self.img_mask.copy()
         out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
         cv2.imwrite('output/transformedImage.png', out)
-        
-        # image = cv2.imread('output/transformedImage.png')
-        # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        # value = 20 #whatever value you want to add
-        # cv2.subtract(hsv[:,:,2], value, hsv[:,:,2])
-        # image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        # cv2.imwrite('output/frame2.png', image)
         self.img_final = out
 
     def create_grid(self, error = 0):
@@ -235,7 +236,7 @@ class Vision:
         # Apply a threshold to the image
         t = self.threshold
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
-        ret, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
+        _, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/thresh.png', thresh1)
 
         # Computes size of a cell in the image [pixels]
@@ -274,15 +275,16 @@ class Vision:
             Call it only once per simulation
         """
         self.take_picture()
-        self.image_processing()     
-        self.create_mask()
-        self.apply_mask()
-        self.create_transform()
-        self.apply_transform()
-        self.create_grid()
+        if self.isCamOn == True:
+            self.image_processing()     
+            self.create_mask()
+            self.apply_mask()
+            self.create_transform()
+            self.apply_transform()
+            self.create_grid()
 
-        self.conversion_factor_x = 125/self.cellx           #à changer le 125
-        self.conversion_factor_y = 125/self.celly
+            self.conversion_factor_x = 125/self.cellx           #à changer le 125
+            self.conversion_factor_y = 125/self.celly
 
     def orientation(self, point1, point2):
         """
@@ -296,10 +298,13 @@ class Vision:
 
 
     def aruco(self):
+        """
+            computes the corners and ids of the detected ArUco markers
+        """
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
 
         # Apply thresholding
-        ret, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/arucotest.png',thresh)
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
@@ -308,13 +313,18 @@ class Vision:
         return corners,ids
 
     def compute_coordinates(self, middle):
-            # cX = (int)((middle[0] - self.offset) / self.cellx)
-            # cY = (int)((middle[1] - self.offset)/self.celly)   
-            cX = (int)((middle[0]) / self.cellx)
-            cY = (int)((middle[1]) / self.celly)   
-            return (cX,cY)
+        """
+            return the coordinates in the grid of the point 
+            converts from pixel coordinates to grid coordinates
+        """
+        cX = (int)((middle[0]) / self.cellx)
+        cY = (int)((middle[1]) / self.celly)   
+        return (cX,cY)
 
     def coordinates(self):
+        """ 
+            sets the coordinates of the goal and the Thymio robot thanks to the ArUco markers
+        """
         corners, ids = self.aruco()
         for c in range(0, len(corners)):
             centre = 0
@@ -323,23 +333,40 @@ class Vision:
             centre = centre / 4
             centre = centre - np.array([self.offset, self.offset])
             if ids[c][0] == 2: #thymio
+                self.thymio = True
                 self.thymio_position = self.compute_coordinates(centre)
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
                 m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
-                h = self.img_final.shape[0]
                 centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(centre[1]))
                 self.thymio_real_pos = np.array([[centre[0]], [centre[1]]])
 
             if ids[c][0] == 1: #goal
+                self.goal = True
                 self.goal_position = self.compute_coordinates(centre)
+
+            
+
 
 
     def update_coordinates(self):
         """
             Updates the occupancy_grid based based on the new image
         """
+        self.goal = False
+        self.thymio = False
+
         self.take_picture()
-        self.apply_mask()
-        self.apply_transform()
-        self.coordinates()
+        if self.isCamOn == True:
+            self.apply_mask()
+            self.apply_transform()
+            self.coordinates()
+
+            if (self.goal == False) and (self.thymio == False):
+                print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "both the Thymio robot and the goal were not detected")
+            elif (self.goal == False):
+                print("\033[31m" + "ERROR MESSAGE: " +"\033[00m" + "the goal was not detected")
+            elif (self.thymio == False):
+                print("\033[31m" + "ERROR MESSAGE: " +"\033[00m" + "the Thymio robot was not detected")
+        else:
+            print("The camera is needed to compute the coordinates of the Thymio and the goal.")
