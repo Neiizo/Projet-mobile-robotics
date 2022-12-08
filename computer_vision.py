@@ -8,7 +8,7 @@ from geometry import max_area, cyclic_intersection_pts
 
 class Vision:
 
-    def __init__(self):
+    def __init__(self, threshold = 200):
         self.img = None # original image taken by camera
         self.p_img = None # processed image
         self.mask = None
@@ -33,6 +33,7 @@ class Vision:
         self.thymio_deviation = None
         self.thymio_real_pos = None
         self.goal_position = None
+        self.threshold = threshold
 
         self.occupancy_grid()
 
@@ -45,16 +46,17 @@ class Vision:
 
         # Check if camera opened successfully
         if not cap.isOpened():
-            print("Error opening video stream")
+           print("Error opening video stream")
 
         # Getting a first frame for the width and height of the plot
         ret, frame = cap.read()
         if(frame is None):
-            print("oopsy")
+           print("oopsy")
+        # frame = cv2.imread('input/frame3.png', cv2.IMREAD_COLOR)
         
-        # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
-
         cv2.imwrite('input/frame.png', frame)
+
+
         cap.release()
         self.img = frame.copy()
 
@@ -65,21 +67,37 @@ class Vision:
         """
 
         # Normalize the image manage lightning
-        img_norm = np.zeros_like(self.img)
-        img_norm = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
+        # img_norm = np.zeros_like(self.img)
+        # img_norm = cv2.normalize(self.img, None, alpha = 0, beta = 255, norm_type=cv2.NORM_MINMAX)
+
+        # Decrease brightness
+        img = self.decrease_brightness(self.img, 10)
 
         # Blur the image to denoise: GaussianBlur
         kernel_size = 5
-        blur = cv2.GaussianBlur(img_norm, (kernel_size, kernel_size), 0)
+        blur = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
         # Convert to B&W
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         # Apply thresholding
         thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 29, 5)
+        # ret, thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/processedImage.png', thresh)
 
         self.p_img = thresh.copy()
+
+    def decrease_brightness(self, img, value):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(hsv)
+        
+        lim = 255-value
+        v[v > lim]  = 255
+        v[v <= lim] += value
+
+        final_hsv = cv2.merge((h,s,v))
+        img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        return img
 
     def create_mask(self):
         """
@@ -90,7 +108,6 @@ class Vision:
         """
 
         img = self.p_img
-
         # Find the contours
         contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -130,7 +147,7 @@ class Vision:
         contours,_ = cv2.findContours(thresh, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         cnt = max_area(contours)
         img_cnt = self.img.copy()
-        cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 20)
+        cv2.drawContours(img_cnt, cnt, -1, (0, 255, 0), 10)
         cv2.imwrite('intermediate/contour.png', img_cnt)
 
 
@@ -142,7 +159,7 @@ class Vision:
       
 
         min_rect = self.img.copy()
-        cv2.drawContours(min_rect,[box],0,(0,255,0),20)
+        cv2.drawContours(min_rect,[box],0,(0,255,0),10)
         cv2.imwrite('intermediate/minRect.png', min_rect)
 
         # Sorts the 4 points clockwise
@@ -195,6 +212,13 @@ class Vision:
         out = self.img_mask.copy()
         out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
         cv2.imwrite('output/transformedImage.png', out)
+        
+        # image = cv2.imread('output/transformedImage.png')
+        # hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # value = 20 #whatever value you want to add
+        # cv2.subtract(hsv[:,:,2], value, hsv[:,:,2])
+        # image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        # cv2.imwrite('output/frame2.png', image)
         self.img_final = out
 
     def create_grid(self, error = 0):
@@ -205,14 +229,15 @@ class Vision:
         """
 
         # Apply a threshold to the image
-        t = 100
-        ret, thresh1 = cv2.threshold(self.img_final,t,255,cv2.THRESH_BINARY)
+        t = self.threshold
+        gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
+        ret, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/thresh.png', thresh1)
 
         # Computes size of a cell in the image [pixels]
         h,w,c = self.img_final.shape
-        self.cellx = round(w/self.columns)
-        self.celly = round(h/self.rows)
+        self.cellx = round((w - 2*self.offset)/self.columns)
+        self.celly = round((h - 2*self.offset)/self.rows)
 
         # Empty grid of size rows x columns
         data = np.ones((self.rows, self.columns))
@@ -226,6 +251,17 @@ class Vision:
                 if m > t:
                     data[k, j] = 0
         self.grid = data
+
+    def show(self):
+        # Show the lines of the computed grid --> DEBUGGGG
+        lines = self.img_final.copy()
+        for k in range(0, self.rows+1):
+            cv2.line(lines, (0, self.offset + k*self.celly),(1100, self.offset + k*self.celly), (0,255,0), 3 )
+        for j in range(0, self.columns+1):
+            cv2.line(lines, (self.offset + j*self.cellx, 0), (self.offset + j*self.cellx, 1500), (0,0,255),3)
+
+        return lines
+
 
 
     def occupancy_grid(self):
@@ -259,7 +295,10 @@ class Vision:
         gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
 
         # Apply thresholding
-        ret, thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
+        cv2.imwrite('intermediate/arucotest.png',thresh)
+        
+
 
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
@@ -268,8 +307,10 @@ class Vision:
         return corners,ids
 
     def compute_coordinates(self, middle):
-            cX = (int)((middle[0] - self.offset) / self.cellx)
-            cY = (int)((middle[1] - self.offset)/self.celly)   
+            # cX = (int)((middle[0] - self.offset) / self.cellx)
+            # cY = (int)((middle[1] - self.offset)/self.celly)   
+            cX = (int)((middle[0]) / self.cellx)
+            cY = (int)((middle[1]) / self.celly)   
             return (cX,cY)
 
     def coordinates(self):
@@ -279,6 +320,7 @@ class Vision:
             for i in range(0, 4):
                 centre += corners[c][0][i]
             centre = centre / 4
+            centre = centre - np.array([self.offset, self.offset])
             if ids[c][0] == 2: #thymio
                 self.thymio_position = self.compute_coordinates(centre)
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
@@ -286,11 +328,12 @@ class Vision:
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
                 h = self.img_final.shape[0]
                 print(m_cell)
-                print(centre)
+                print("Thymio's center: ", centre)
                 centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(h - centre[1]))
                 self.thymio_real_pos = centre
 
             if ids[c][0] == 1: #goal
+                print("Goal's center: ", centre)
                 self.goal_position = self.compute_coordinates(centre)
 
 

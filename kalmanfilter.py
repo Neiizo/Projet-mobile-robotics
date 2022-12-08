@@ -56,8 +56,8 @@ class KalmanFilter(object):
         #####################################################
         # isCamOn               : bool representing wether the webcam is available or not
         # pos_from_cam          : 2x1 vector giving the position of the robot, from the webcam in [mm]
-        # direction             : Character chain defining what direction the thymio is supposed to follow ( XXXXXXXXX )
-        # speed                 : 2x1 vector giving the speed of the thymio, from the thymio's sensor. In [mm/s]
+        # direction             : Character chain defining what direction the thymio is supposed to follow (0, 1, 2 or 3)
+        # speed                 : 2x1 vector giving the speed of the thymio, from the thymio's sensor.
         # gnd                   : value from the ground sensor of the thymio
         # gnd_prev              : value from the ground sensor of the thymio from last's itteration
         # transition_threshold  : value of the threshold at which we consider we crossed a line or not
@@ -77,6 +77,7 @@ class KalmanFilter(object):
         S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
         self.E = self.E + np.dot(K, self.i)
+        print("tadaaaa", self.E)
         self.P = self.P - np.dot(K, np.dot(self.H, self.P))
         return self.E
 
@@ -87,7 +88,7 @@ class KalmanFilter(object):
         # Updates the state estimation vector aswell as the state covariance vector
         #####################################################
 
-        u = speed*self.speed_to_mms
+        u = speed * self.speed_to_mms
         # State estimation
         self.E = np.dot(self.A, self.E) + np.dot(self.B, u) 
         # Calcul de la covariance de l'erreur
