@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import time
 
 from geometry import max_area, cyclic_intersection_pts
 
@@ -40,6 +41,8 @@ class Vision:
         self.thymio_deviation = None        # distance (mm) from center of cell
         self.thymio_real_pos = None         # position in the grid in mm 
         self.goal_position = None           # goal's position in the grid
+
+        self.cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
         
 
         self.occupancy_grid()
@@ -49,15 +52,15 @@ class Vision:
             input:      None
             output:     picture taken by the camera
         """
-        cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
+        # cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
 
         # Check if camera opened successfully
-        if not cap.isOpened():
+        if not self.cap.isOpened():
             self.isCamOn = False
             print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "could not open the video stream.")
 
         # Getting a first frame for the width and height of the plot
-        ret, frame = cap.read()
+        ret, frame = self.cap.read()
         
         if(not ret):
            self.isCamOn = False
@@ -69,7 +72,6 @@ class Vision:
         
         cv2.imwrite('input/frame.png', frame)
 
-        cap.release()
         self.img = frame.copy()
 
     def image_processing(self):
@@ -353,14 +355,23 @@ class Vision:
         """
             Updates the occupancy_grid based based on the new image
         """
+        start = time.time()
         self.goal = False
         self.thymio = False
-
         self.take_picture()
+        current = time.time()
+        print(" T1 = ", current-start)
         if self.isCamOn == True:
+            current = time.time()
             self.apply_mask()
+            current = time.time()
+            print(" T2 = ",current-start)
             self.apply_transform()
+            current = time.time()
+            print(" T3 = ",current-start)
             self.coordinates()
+            current = time.time()
+            print(" T4 = ",current-start)
 
             if (self.goal == False) and (self.thymio == False):
                 print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "both the Thymio robot and the goal were not detected")
