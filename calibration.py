@@ -26,15 +26,15 @@ class data(object):
             if(self.speed_conversion != 0):
                 print("########################")
                 print("r_nu and q_nu will be computed")
-                print("#\n#\n#\n#\n")#ajouter des retour à la lignes
+                print("#\n#\n#\n#\n#")#ajouter des retour à la lignes
             elif(self.r_nu != 0):
                 print("########################")
                 print("speed_conversion will be computed")
-                print("#\n#\n#\n#\n")
+                print("#\n#\n#\n#\n#")
             else:
                 print("########################")
                 print("speed_conversion, r_nu and q_nu will be computed")
-                print("#\n#\n#\n#\n")
+                print("#\n#\n#\n#\n#")
             timerStarted = False
             iter = 0
             startIter = 0
@@ -64,17 +64,19 @@ class data(object):
                     aw(self.client.sleep(self.dt))
                     onLine = False
                     self.compute_data(start, end, startIter, thymio_data)
-                    print("IF YOU DO NOW WANT TO RUN THIS CALIBRATION RUN OVER AND OVER, YOU CAN PASTE THE FOLLOWING COMMAND INSTEAD OF THE PREVIOUS ONE")
-                    print(f"cal_data.calibration_mm({self.speed_conversion}, {self.r_nu})")
+                    print("YOU ARE IN A 'CALIBRATION' MODE. IF YOU WISH TO STOP THE CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
+                    print(f"cal_data = data(Ts, SPEED_X, SPEED_Y, GND_THRESHOLD, client, node, {self.speed_conversion}, {self.r_nu})")
+                    print("cal_data.calibration_mm()")
                     print("########################")
                 iter = iter + 1
         else:
             self.speed_mms =self.speed_conversion * self.speed_y
             self.show_data()
-            print("YOU ARE IN A NO CALIBRATION MODE. IF YOU WISH TO RERUN CALIBRATION, RERUN THE FOLLOWING COMMAND IF YOU WISH TO RE RUN THE CALIBRATION TEST")
+            print("YOU ARE IN A 'NO CALIBRATION' MODE. IF YOU WISH TO RUN CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
+            print(f"cal_data = data(Ts, SPEED_X, SPEED_Y, GND_THRESHOLD, client, node)")
             print("cal_data.calibration_mm()")
             print("########################")
-        self.calibrated = 0 # A MODIFIER PLUS TARD POUR LA DEUXIèME COMMANDE DE CALIBARTION
+        self.calibrated = 0 
 
 
     def get_data(self, thymio_data):
@@ -93,19 +95,19 @@ class data(object):
         self.show_data()
 
     def show_data(self):
-        print("########################")
         print(f"The conversion factor for the speed of the thymio to mm/sh is : {self.speed_conversion} ")
         print(f"With a desired speed of : {self.speed_y}, the thymio speed is : {self.speed_mms} mm/s")
         print(f"The standard deviation from the speed state (q_nu) and speed measurement (r_nu) is : {self.q_nu} ")
         print("########################")
 
-    def cam_calibration(self):
+    def cam_calibration(self, cam_threshold):
         if (self.calibrated != 1):
             self.r_nu = 3.1773380067632053
             self.speed_conversion = 0.3210733473116764
             self.q_nu = self.r_nu
-        threshold = 200 # faire fct pour calibrer ce machin
-        vision = av.Vision(threshold)
+
+        # faire une boucle qui test différent threshold, en initialisant vision à chaque fois, avec le nouveau threshold, et enappelant plusieurs fois aruco
+        vision = av.Vision(cam_threshold)
         r_p_cam = 1 
         q_p_cam = 1 
         Q_cam = np.array([self.q_nu, q_p_cam])
@@ -115,4 +117,4 @@ class data(object):
 
         Q_gnd = np.array([self.q_nu, q_p_gnd])
         R_gnd = np.array([self.q_nu, r_p_gnd])
-        return vision, Q_cam, R_cam, Q_gnd, R_gnd
+        return vision, Q_cam, R_cam, Q_gnd, R_gnd   

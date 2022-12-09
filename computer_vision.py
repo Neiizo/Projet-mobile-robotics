@@ -11,7 +11,7 @@ class Vision:
     def __init__(self, threshold = 180):
 
         self.threshold = threshold      # threshold depending on the lightning
-        self.isCamOn = True
+        self.isCamOn = False
 
         self.img = None             # original image taken by camera
         self.p_img = None           # processed image
@@ -49,27 +49,27 @@ class Vision:
             input:      None
             output:     picture taken by the camera
         """
-        # cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
+        cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
 
-        # # Check if camera opened successfully
-        # if not cap.isOpened():
-        #    self.isCamOn = False
-            # print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "could not open the video stream.")
+        # Check if camera opened successfully
+        if not cap.isOpened():
+            self.isCamOn = False
+            print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "could not open the video stream.")
 
         # Getting a first frame for the width and height of the plot
-        # ret, frame = cap.read()
+        ret, frame = cap.read()
         
-        # if(not ret):
-        #    self.isCamOn = False
-        #    print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + " cannot receive frame.")
-        # else:
-        #     self.isCamOn = True
+        if(not ret):
+           self.isCamOn = False
+           print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + " cannot receive frame.")
+        else:
+            self.isCamOn = True
 
-        frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
+        # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
         
         # cv2.imwrite('input/frame.png', frame)
 
-        # cap.release()
+        cap.release()
         self.img = frame.copy()
 
     def image_processing(self):

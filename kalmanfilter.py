@@ -86,10 +86,9 @@ class KalmanFilter(object):
         # Updates the state estimation vector aswell as the state covariance vector
         #####################################################
 
-        u = speed * self.speed_to_mms
+        u = np.array([[speed[0]*self.speed_to_mms],[speed[1]*self.speed_to_mms]])
         # State estimation
         self.E = np.dot(self.A, self.E) + np.dot(self.B, u) 
-        # Calcul de la covariance de l'erreur
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
 
 
@@ -97,6 +96,7 @@ class KalmanFilter(object):
         #####################################################
         # sets the appropriate observation of the true state y, and compute the corresponding innovation
         #####################################################
+        
         self.Q = self.Q_cam
         self.R = self.R_cam
         self.H = np.eye(2).astype(int)
