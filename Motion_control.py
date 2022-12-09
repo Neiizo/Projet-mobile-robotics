@@ -25,7 +25,7 @@ def motors(node, left, right):
 def get_turn(x,y,orientation):
     if((x==1) & (y==0)):
         dir = 0
-    elif((x==0) & (y==-1)):
+    elif((x==0) & (y==1)):
         dir = 1
     elif((x==-1) & (y==0)):
         dir = 2
