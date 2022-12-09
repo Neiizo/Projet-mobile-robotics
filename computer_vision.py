@@ -30,6 +30,8 @@ class Vision:
 
         self.rows = 6 
         self.columns = 9
+        self.cell_width = 62.5
+        
         self.cellx = None       # number of pixel in x corresponding to a cell
         self.celly = None       # number of pixel in y corresponding to a cell
         self.grid = None        # occupancy grid
@@ -321,7 +323,7 @@ class Vision:
         """
         cX = (int)((middle[0]) / self.cellx)
         cY = (int)((middle[1]) / self.celly)   
-        return (cX,cY)
+        return (cX, cY)
 
     def coordinates(self):
         """ 
@@ -355,23 +357,13 @@ class Vision:
         """
             Updates the occupancy_grid based based on the new image
         """
-        start = time.time()
         self.goal = False
         self.thymio = False
         self.take_picture()
-        current = time.time()
-        print(" T1 = ", current-start)
         if self.isCamOn == True:
-            current = time.time()
             self.apply_mask()
-            current = time.time()
-            print(" T2 = ",current-start)
             self.apply_transform()
-            current = time.time()
-            print(" T3 = ",current-start)
             self.coordinates()
-            current = time.time()
-            print(" T4 = ",current-start)
 
             if (self.goal == False) and (self.thymio == False):
                 print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "both the Thymio robot and the goal were not detected")

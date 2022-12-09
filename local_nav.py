@@ -194,9 +194,9 @@ def coordinate_increment(o_robot, value,x,y):
     if o_robot == 0:
         x_new = x+value
     elif o_robot == 1:
-        y_new = y+value
+        y_new = y-value
     elif o_robot == 2:
         x_new = x-value
     elif o_robot == 3:
-        y_new = y-value
+        y_new = y+value
     return x_new,y_new

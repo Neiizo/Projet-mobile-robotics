@@ -39,9 +39,9 @@ def get_turn(x,y,orientation):
     else:
         return new_orientation
 
-def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation):
-   x_mm = (dx + 0.5)*125-kalman_pos_x
-   y_mm = (dy + 0.5)*125-kalman_pos_y
+def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation, cell_width):
+   x_mm = (dx + 0.5)*cell_width*2-kalman_pos_x
+   y_mm = (dy + 0.5)*cell_width*2-kalman_pos_y
    print(y_mm)
    print(x_mm)
    if (orientation == 0 or orientation == 2):
