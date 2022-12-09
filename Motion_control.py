@@ -1,6 +1,7 @@
 # Import tdmclient Notebook environment:
 import numpy as np
 from tdmclient import aw
+import math
 
 
 
@@ -39,18 +40,28 @@ def get_turn(x,y,orientation):
     else:
         return new_orientation
 
-def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation, cell_width):
+def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation, cell_width, vision):
    x_mm = (dx + 0.5)*cell_width*2-kalman_pos_x
    y_mm = (dy + 0.5)*cell_width*2-kalman_pos_y
    print(y_mm)
    print(x_mm)
+
+   next_target_x = dx *cell_width*2 + cell_width
+   next_target_y = (vision.rows - 1 - dy) *cell_width*2 + cell_width 
+   delta_x = next_target_x - vision.thymio_real_pos
+   delta_y = next_target_y - vision.thymio_real_pos
+   desired_angle = math.degrees(math.atan2(delta_y,  delta_x)) % 360
+
+   if(desired_angle > orientation):
+      adjust_turn = -1
+   elif(desired_angle < orientation):
+      adjust_turn = 1
+   else:
+      adjust_turn = 0    
+
    if (orientation == 0 or orientation == 2):
-      turn = get_turn(0,np.sign(y_mm),orientation)
-      adjust_turn = turn*(-y_mm)
       adjust_speed = -x_mm*np.sign(orientation-1)
    else:
-      turn = get_turn(np.sign(x_mm),0,orientation)
-      adjust_turn = turn*(x_mm)
       adjust_speed = -y_mm*np.sign(orientation-2)
    return adjust_turn,adjust_speed
 

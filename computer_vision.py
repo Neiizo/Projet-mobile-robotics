@@ -30,7 +30,7 @@ class Vision:
 
         self.rows = 6 
         self.columns = 9
-        self.cell_width = 62.5
+        self.cell_width = 145.0
         
         self.cellx = None       # number of pixel in x corresponding to a cell
         self.celly = None       # number of pixel in y corresponding to a cell
@@ -287,8 +287,8 @@ class Vision:
             self.apply_transform()
             self.create_grid()
 
-            self.conversion_factor_x = 125/self.cellx           #à changer le 125
-            self.conversion_factor_y = 125/self.celly
+            self.conversion_factor_x = self.cell_width/self.cellx           #à changer le 125
+            self.conversion_factor_y = self.cell_width/self.celly
 
     def orientation(self, point1, point2):
         """
@@ -342,7 +342,7 @@ class Vision:
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
                 m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
-                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(centre[1]))
+                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(self.img_final[0] - self.offset - centre[1]))
                 self.thymio_real_pos = np.array([[centre[0]], [centre[1]]])
 
             if ids[c][0] == 1: #goal
