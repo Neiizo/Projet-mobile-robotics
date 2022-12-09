@@ -50,7 +50,7 @@ class KalmanFilter(object):
          self.R_gnd = np.diag(r_gnd)
 
 
-    def filter(self, isCamOn, pos_from_cam, direction, speed, gnd, gnd_prev, 
+    def filter(self, isCamOn, pos_from_cam, direction, speed, orientation, gnd, gnd_prev, 
                transition_threshold):
         #####################################################
         # isCamOn               : bool representing wether the webcam is available or not
@@ -65,29 +65,37 @@ class KalmanFilter(object):
         # the state estimation vector and the covariance estimation vector
         #####################################################
 
-        self.predict(speed)
+        self.predict(speed,  orientation,)
         if(isCamOn == 1):
             #camera is on: we will use it as it provides a better overview
             self.updateWithCam(pos_from_cam)
+            S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
+            K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
         else:
             #camera is off: we now rely on ground sensor
-            self.updateWithGnd(pos_from_cam, direction, gnd, gnd_prev, transition_threshold)
+            # self.updateWithGnd(pos_from_cam, direction, gnd, gnd_prev, transition_threshold)
+            K = 0
+
         
-        S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
-        K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
+        # S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
+        # K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))  
         self.E = self.E + np.dot(K, self.i)
         self.P = self.P - np.dot(K, np.dot(self.H, self.P))
         return self.E
 
 
 
-    def predict(self, speed): 
+    def predict(self, speed, orientation): 
         #####################################################
         # Updates the state estimation vector aswell as the state covariance vector
+        # orientatnion DEFINIR
         #####################################################
-
-        u = np.array([[speed[0]*self.speed_to_mms],[speed[1]*self.speed_to_mms]])
-        # State estimation
+        u = np.zeros((2,1))
+        #faire une conversion de l'angle)
+        speed_avg = (speed[0] + speed[1]) /2
+        u[0] = speed_avg * self.speed_to_mms * np.cos(orientation)
+        u[1] = speed_avg * self.speed_to_mms * np.sin(orientation)
+        # u = np.array([[speed[0]*self.speed_to_mms],[speed[1]*self.speed_to_mms]])
         self.E = np.dot(self.A, self.E) + np.dot(self.B, u) 
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
 

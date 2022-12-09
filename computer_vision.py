@@ -67,7 +67,7 @@ class Vision:
 
         # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
         
-        # cv2.imwrite('input/frame.png', frame)
+        cv2.imwrite('input/frame.png', frame)
 
         cap.release()
         self.img = frame.copy()
