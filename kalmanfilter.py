@@ -95,7 +95,6 @@ class KalmanFilter(object):
         speed_avg = (speed[0] + speed[1]) /2
         u[0] = speed_avg * self.speed_to_mms * np.cos(orientation)
         u[1] = speed_avg * self.speed_to_mms * np.sin(orientation)
-        # u = np.array([[speed[0]*self.speed_to_mms],[speed[1]*self.speed_to_mms]])
         self.E = np.dot(self.A, self.E) + np.dot(self.B, u) 
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
 
