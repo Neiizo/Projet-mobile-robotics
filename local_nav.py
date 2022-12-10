@@ -30,12 +30,17 @@ def obstacle_detect(node):
 
 
 #Avoid obstacles by doing a half circle to the right, triggered when obstacle_detect() returns 1
-def obstacle_avoid(x,y,orientation, obj_x,obj_y, speed, step_duration, speed_conversion, node, client):
+def obstacle_avoid(x,y,orientation, shortest_path, index, speed, step_duration, speed_conversion, node, client):
     obstThrL = 20 
     obst_avoid_state = 1
     complete = False
     going_left = False
     Ts = 0.01
+    obj_x = shortest_path[0][index+2]
+    obj_y = shortest_path[1][index+2]
+    #shortest_path = np.transpose(shortest_path)
+    shortest_path_local = shortest_path #[:index]
+    print("shortest_path_local", shortest_path_local)
     x_robot = x
     y_robot = y
     o_robot = orientation
@@ -62,18 +67,19 @@ def obstacle_avoid(x,y,orientation, obj_x,obj_y, speed, step_duration, speed_con
                     obst_avoid_state = OBST_VERTICAL_MOVE
                     #complete = 1
             else:
-                # add shift to x and y
                 if not going_left:
                     o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
                     o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
                     going_left = True
-                else: 
-                    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
-                    going_left = False
+                # else: 
+                #     o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                #     going_left = False
         
         elif obst_avoid_state == OBST_VERTICAL_MOVE:
-            o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
-            going_left = False
+            if going_left:
+                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+            else:
+                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
             time_spent,obst_forw = move_forward(node, client, speed, Ts, obstThrL, going_left)
             distance = time_spent/step_duration
             if obst_forw:
@@ -90,19 +96,26 @@ def obstacle_avoid(x,y,orientation, obj_x,obj_y, speed, step_duration, speed_con
                 x_robot,y_robot = coordinate_increment(o_robot, np.floor(1+distance),x_robot,y_robot)
                 print("x,y",x_robot,y_robot, o_robot)
                 obst_avoid_state = OBST_TO_PATH
-                if (x_robot == obj_x) and (y_robot == obj_y):
-                    complete = 1                
+                if (x_robot,y_robot) in shortest_path_local:
+                    complete = 1
+                    return complete,x_robot,y_robot,o_robot            
 
         elif obst_avoid_state == OBST_TO_PATH:
             obst_forward = False
             counter_stuck = 0
-            o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+            if going_left:
+                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+            else:
+                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
             if not obstacle_detect(node):
                 move_adjust(node, client, speed, Ts, obst_forw, step_duration)
                 x_robot,y_robot = coordinate_increment(o_robot, 1,x_robot,y_robot)
                 print("x,y",x_robot,y_robot, o_robot)
             while (x_robot!=obj_x) or (y_robot!=obj_y):
                 counter_stuck += 1
+                if (x_robot,y_robot) in shortest_path_local:
+                    complete = 1
+                    return complete,x_robot,y_robot,o_robot
                 if x_robot>obj_x:
                     o_robot = turn(o_robot,-1,0,speed[0],speed_conversion, node, client)
                     if not obstacle_detect(node):
@@ -134,7 +147,6 @@ def obstacle_avoid(x,y,orientation, obj_x,obj_y, speed, step_duration, speed_con
                 if counter_stuck > 5:
                     o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
             complete = 1
-
     return complete,x_robot,y_robot,o_robot
     
 def turn(o_robot,x,y,SPEED_X,speed_conversion, node, client,turn = 10):

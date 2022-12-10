@@ -65,7 +65,7 @@ class KalmanFilter(object):
         # the state estimation vector and the covariance estimation vector
         #####################################################
 
-        self.predict(speed,  orientation,)
+        self.predict(speed,  orientation)
         if(isCamOn == 1):
             #camera is on: we will use it as it provides a better overview
             self.updateWithCam(pos_from_cam)

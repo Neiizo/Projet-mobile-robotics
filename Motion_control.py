@@ -3,7 +3,7 @@ import numpy as np
 from tdmclient import aw
 import math
 
-
+#faire une classe pour stocker toutes les variables, et éviter les appels avec milles arguments
 
 def correct_orientation(orientation):
     if((orientation > 60) & (orientation < 120)): #a mettre avec des defines et une margin
@@ -40,30 +40,22 @@ def get_turn(x,y,orientation):
     else:
         return new_orientation
 
-def kalman_adjust(dx,dy,kalman_pos_x,kalman_pos_y,orientation, cell_width, vision):
-   x_mm = (dx + 0.5)*cell_width*2-kalman_pos_x
-   y_mm = (dy + 0.5)*cell_width*2-kalman_pos_y
-   print(y_mm)
-   print(x_mm)
+def kalman_adjust(kp, next_target_x, next_target_y, dx,dy,kalman_pos,dir,orientation, half_cell_width):
+   delta_x = next_target_x - kalman_pos[0]
+   delta_y = next_target_y - kalman_pos[1]
+   desired_angle = (math.degrees(math.atan2(delta_y,  delta_x))) % 360
+   adjust_turn = 0
+   delta_angle = desired_angle - orientation
+   
+   if(delta_angle > 270):
+      delta_angle = delta_angle - 360
+   if(delta_angle < -270):
+      delta_angle = delta_angle + 360
+   
+   if(np.abs(delta_angle) > 10): 
+      adjust_turn = (int)(np.round(kp * delta_angle))
+   return delta_x, delta_y, adjust_turn
 
-   next_target_x = dx *cell_width*2 + cell_width
-   next_target_y = (vision.rows - 1 - dy) *cell_width*2 + cell_width 
-   delta_x = next_target_x - vision.thymio_real_pos
-   delta_y = next_target_y - vision.thymio_real_pos
-   desired_angle = math.degrees(math.atan2(delta_y,  delta_x)) % 360
-
-   if(desired_angle > orientation):
-      adjust_turn = -1
-   elif(desired_angle < orientation):
-      adjust_turn = 1
-   else:
-      adjust_turn = 0    
-
-   if (orientation == 0 or orientation == 2):
-      adjust_speed = -x_mm*np.sign(orientation-1)
-   else:
-      adjust_speed = -y_mm*np.sign(orientation-2)
-   return adjust_turn,adjust_speed
 
 
 def robot_turn(signturn, SPEED , speed_conversion, node, client):

@@ -24,12 +24,13 @@ class Vision:
         self.width = None           # width of the image
         self.height = None           # height of the image
 
-        self.offset = 10                    #offset to apply in order not to cut the robots on the border
+        self.offset = 0                    #offset to apply in order not to cut the robots on the border
+        self.y_offset = -35                  # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
-        self.rows = 6 
-        self.columns = 9
+        self.rows = 8 
+        self.columns = 10
         self.cell_width = 145.0
         
         self.cellx = None       # number of pixel in x corresponding to a cell
@@ -342,8 +343,8 @@ class Vision:
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
                 m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
-                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(self.img_final[0] - self.offset - centre[1]))
-                self.thymio_real_pos = np.array([[centre[0]], [centre[1]]])
+                centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(self.img_final.shape[0] - self.offset - centre[1]))
+                self.thymio_real_pos = np.array([[centre[0]], [centre[1]+self.y_offset]])
 
             if ids[c][0] == 1: #goal
                 self.goal = True

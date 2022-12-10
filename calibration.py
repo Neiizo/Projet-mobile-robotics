@@ -65,7 +65,7 @@ class data(object):
                     onLine = False
                     self.compute_data(start, end, startIter, thymio_data)
                     print("YOU ARE IN A 'CALIBRATION' MODE. IF YOU WISH TO STOP THE CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
-                    print(f"cal_data = data(Ts, SPEED_X, SPEED_Y, GND_THRESHOLD, client, node, {self.speed_conversion}, {self.r_nu})")
+                    print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node, {self.speed_conversion}, {self.r_nu})")
                     print("cal_data.calibration_mm()")
                     print("########################")
                 iter = iter + 1
@@ -73,7 +73,7 @@ class data(object):
             self.speed_mms =self.speed_conversion * self.speed_y
             self.show_data()
             print("YOU ARE IN A 'NO CALIBRATION' MODE. IF YOU WISH TO RUN CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
-            print(f"cal_data = data(Ts, SPEED_X, SPEED_Y, GND_THRESHOLD, client, node)")
+            print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node)")
             print("cal_data.calibration_mm()")
             print("########################")
         self.calibrated = 0 
@@ -151,8 +151,8 @@ class data(object):
 
         
         # vision = av.Vision(cam_threshold)
-        r_p_cam = 1 
-        q_p_cam = 1 
+        r_p_cam = 0.01 
+        q_p_cam = 0.01 
         Q_cam = np.array([self.q_nu, q_p_cam])
         R_cam = np.array([self.q_nu, r_p_cam])
         r_p_gnd = 0.25 
