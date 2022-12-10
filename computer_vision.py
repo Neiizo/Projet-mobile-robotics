@@ -25,7 +25,7 @@ class Vision:
         self.height = None           # height of the image
 
         self.offset = 0                    #offset to apply in order not to cut the robots on the border
-        self.y_offset = -35                  # due to our setup
+        self.y_offset = -45                  # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 

@@ -52,7 +52,7 @@ def kalman_adjust(kp, next_target_x, next_target_y, dx,dy,kalman_pos,dir,orienta
    if(delta_angle < -270):
       delta_angle = delta_angle + 360
    
-   if(np.abs(delta_angle) > 10): 
+   if(np.abs(delta_angle) > 7): 
       adjust_turn = (int)(np.round(kp * delta_angle))
    return delta_x, delta_y, adjust_turn
 
