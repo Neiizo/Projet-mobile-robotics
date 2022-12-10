@@ -3,14 +3,14 @@ import numpy as np
 from tdmclient import aw
 import math
 
-#faire une classe pour stocker toutes les variables, et éviter les appels avec milles arguments
+MARGIN = 45
 
 def correct_orientation(orientation):
-    if((orientation > 60) & (orientation < 120)): #a mettre avec des defines et une margin
+    if((orientation > 90 - MARGIN) & (orientation < 90 + MARGIN)):
         return 1
-    elif((orientation > 150) & (orientation < 210)):
+    elif((orientation > 180 - MARGIN) & (orientation < 180 + MARGIN)):
         return 2
-    elif((orientation > 240) & (orientation < 300)): #mettre define
+    elif((orientation > 270 - MARGIN) & (orientation < 270 + MARGIN)):
         return 3
     else:
         return 0
@@ -40,17 +40,17 @@ def get_turn(x,y,orientation):
     else:
         return new_orientation
 
-def kalman_adjust(kp, next_target_x, next_target_y, dx,dy,kalman_pos,dir,orientation, half_cell_width):
+def kalman_adjust(kp, next_target_x, next_target_y, kalman_pos, orientation):
    delta_x = next_target_x - kalman_pos[0]
    delta_y = next_target_y - kalman_pos[1]
    desired_angle = (math.degrees(math.atan2(delta_y,  delta_x))) % 360
    adjust_turn = 0
    delta_angle = desired_angle - orientation
    
-   if(delta_angle > 270):
-      delta_angle = delta_angle - 360
-   if(delta_angle < -270):
-      delta_angle = delta_angle + 360
+   if(np.abs(delta_angle) > 270):
+      delta_angle = delta_angle - np.sign(delta_angle)*360 # A VERIFIER
+#    if(delta_angle < -270):
+#       delta_angle = delta_angle + 360
    
    if(np.abs(delta_angle) > 7): 
       adjust_turn = (int)(np.round(kp * delta_angle))
@@ -80,5 +80,3 @@ def robot_turn(signturn, SPEED , speed_conversion, node, client):
     else:
         motors(node, 0, 0)
 
-
-#motors(0, 0, verbose=True)   

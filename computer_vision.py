@@ -22,10 +22,10 @@ class Vision:
 
         self.transform = None       # transform that allows resize and unskrew the original image
         self.width = None           # width of the image
-        self.height = None           # height of the image
+        self.height = None          # height of the image
 
-        self.offset = 0                    #offset to apply in order not to cut the robots on the border
-        self.y_offset = -45                  # due to our setup
+        self.offset = 0                     # offset to apply in order not to cut the robots on the border
+        self.y_offset = -45                 # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
@@ -45,7 +45,7 @@ class Vision:
         self.thymio_real_pos = None         # position in the grid in mm 
         self.goal_position = None           # goal's position in the grid
 
-        self.cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
+        self.cap = cv2.VideoCapture(0)  
         
 
         self.occupancy_grid()
@@ -55,7 +55,6 @@ class Vision:
             input:      None
             output:     picture taken by the camera
         """
-        # cap = cv2.VideoCapture(0) # A CHANGER SUIVANT LORDI
 
         # Check if camera opened successfully
         if not self.cap.isOpened():
