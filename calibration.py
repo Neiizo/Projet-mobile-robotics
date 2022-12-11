@@ -5,30 +5,30 @@ import Motion_control as mc
 import computer_vision as av
 
 class data(object):
-    def __init__(self, dt, speed_x, speed_y, TRANSITION_THRESHOLD, client, node, speed_conversion = 0, r_nu = 0):
-        self.dt = dt
+    def __init__(self, dt, speed_l, speed_r, TRANSITION_THRESHOLD, client, node, speed_conversion = 0, r_nu = 0):
+        self.dt = dt                 # sampling time
         self.node = node
         self.client = client
-        self.speed_x = speed_x
-        self.speed_y = speed_y
+        self.speed_l = speed_l       # speed of the left wheel, in thymio's coordinate
+        self.speed_r = speed_r       # speed of the right wheel, in thymio's coordinate
         self.gnd_threshold = TRANSITION_THRESHOLD
         self.LINE_LENGTH = 300
         self.calibrated = 0
         self.speed_mms = 0
 
-        # will get overridden if a calibration is made, otherwise, these are some safe values  
+        # Will get overridden if a calibration is made, otherwise, these are some safe values  
         self.speed_conversion = speed_conversion
         self.r_nu = r_nu
         self.q_nu = self.r_nu
         self.q_p_cam = 0.25
-        self.r_p_cam = 0.
+        self.r_p_cam = 0.01
 
     def calibration_mm(self, mc):
         if (self.speed_conversion*self.r_nu) == 0:
             if(self.speed_conversion != 0):
                 print("########################")
                 print("r_nu and q_nu will be computed")
-                print("#\n#\n#\n#\n#")#ajouter des retour à la lignes
+                print("#\n#\n#\n#\n#")
             elif(self.r_nu != 0):
                 print("########################")
                 print("speed_conversion will be computed")
@@ -45,14 +45,11 @@ class data(object):
             end = 0
             thymio_data = []
 
-            mc.motors(self.speed_x, self.speed_y)
+            mc.motors(self.speed_l, self.speed_r)
             while(onLine == True):
                 aw(self.node.wait_for_variables())
                 self.get_data(thymio_data)
                 aw(self.client.sleep(self.dt))
-                #tenter avec un average des 2 capteurs
-                # avg_gnd = np.mean(thymio_data[iter]["ground"])
-                # print(avg_gnd)
                 if(thymio_data[iter]["ground"][0] < self.gnd_threshold):
                     if(timerStarted == False):
                         timerStarted = True
@@ -72,7 +69,7 @@ class data(object):
                     print("########################")
                 iter = iter + 1
         else:
-            self.speed_mms =self.speed_conversion * self.speed_y
+            self.speed_mms =self.speed_conversion * self.speed_r
             self.show_data(mc)
             print("YOU ARE IN A 'NO CALIBRATION' MODE. IF YOU WISH TO RUN CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
             print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node)")
@@ -88,7 +85,7 @@ class data(object):
     def compute_data(self, start, end, startIter, thymio_data):
         duration = end - start
         self.speed_mms = self.LINE_LENGTH / duration
-        self.speed_conversion = self.speed_mms / self.speed_y
+        self.speed_conversion = self.speed_mms / self.speed_r
         avg_speed = [(x["left_speed"]+x["right_speed"])/2/self.speed_conversion for x in thymio_data]
         self.q_nu = np.std(avg_speed[startIter:])/2
         self.r_nu = self.q_nu
@@ -96,7 +93,7 @@ class data(object):
 
     def show_data(self, mc):
         self.calibrated = 1
-        speed_avg = (self.speed_y  + self.speed_x)/2
+        speed_avg = (self.speed_r  + self.speed_l)/2
         print(f"The conversion factor for the speed of the thymio to mm/s is : {self.speed_conversion} ")
         print(f"With a desired speed of : {speed_avg}, the thymio speed is : {self.speed_mms} mm/s")
         print(f"The standard deviation from the speed state (q_nu) and speed measurement (r_nu) is : {self.q_nu} ")
@@ -133,9 +130,4 @@ class data(object):
         
         Q_cam = np.array([self.q_p_cam, self.q_nu])
         R_cam = np.array([self.r_p_cam, self.r_nu])
-        r_p_gnd = 0.25 
-        q_p_gnd = 0.04
-
-        Q_gnd = np.array([q_p_gnd, self.q_nu])
-        R_gnd = np.array([r_p_gnd, self.r_nu])
-        return vision, Q_cam, R_cam, Q_gnd, R_gnd   
+        return vision, Q_cam, R_cam 

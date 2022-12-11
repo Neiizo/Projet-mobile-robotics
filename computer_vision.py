@@ -50,7 +50,7 @@ class Vision:
         self.check = True
 
         self.cap = cv2.VideoCapture(0)  
-        
+
 
         self.occupancy_grid()
 
@@ -161,7 +161,7 @@ class Vision:
             Set the self.transform variable
         """
         img1 = self.mask.copy()
-        ret,thresh = cv2.threshold(img1,127,255,0)
+        _,thresh = cv2.threshold(img1,127,255,0)
 
         
         contours,_ = cv2.findContours(thresh, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
@@ -247,12 +247,6 @@ class Vision:
             black (obstacle) = 1
         """
 
-        # Apply a threshold to the image
-        # t = self.threshold
-        # gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
-        # _, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
-        # cv2.imwrite('intermediate/thresh.png', thresh1)
-
         # Computes size of a cell in the image [pixels]
         h,w = self.img_final.shape
         self.cellx = round((w - 2*self.offset)/self.columns)
@@ -272,7 +266,7 @@ class Vision:
         self.grid = data
 
     def show(self):
-        # Show the lines of the computed grid --> DEBUGGGG
+        # Show the lines of the computed grid --> DEBUG
         lines = cv2.imread('output/transformedImage.png', cv2.IMREAD_COLOR)
         for k in range(0, self.rows+1):
             cv2.line(lines, (0, self.offset + k*self.celly),(1100, self.offset + k*self.celly), (0,255,0), 3 )
@@ -297,7 +291,7 @@ class Vision:
             self.apply_transform()
             self.create_grid()
 
-            self.conversion_factor_x = self.cell_width/self.cellx           #à changer le 125
+            self.conversion_factor_x = self.cell_width/self.cellx           
             self.conversion_factor_y = self.cell_width/self.celly
 
     def orientation(self, point1, point2):
@@ -315,11 +309,6 @@ class Vision:
         """
             computes the corners and ids of the detected ArUco markers
         """
-        # gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
-
-        # # Apply thresholding
-        # _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
-        # cv2.imwrite('intermediate/arucotest.png',thresh)
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
         arucoParams = cv2.aruco.DetectorParameters_create()
@@ -389,7 +378,6 @@ class Vision:
 
             if self.goal:
                 if(self.check):
-                    print("first check")
                     self.goal_previous = self.goal_position
                     self.check = False
                 if (self.goal_position[0] == self.goal_previous[0]) and (self.goal_position[1] == self.goal_previous[1]):

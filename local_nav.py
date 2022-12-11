@@ -10,8 +10,11 @@ OBST_AVOID = 1
 OBST_HORIZONTAL_MOVE = 2
 OBST_VERTICAL_MOVE = 3
 OBST_TO_PATH = 4
-# Detect Obstacle using the left, middle and right proximity sensors in the front of the Thymio
+
 def obstacle_detect(node):
+    #####################################################
+    # Detect Obstacle using the left, middle and right proximity sensors in the front of the Thymio
+    #####################################################
 
     obstThrL = 10      # low obstacle threshold to switch state 1->0
     obstThrH = 1000      # high obstacle threshold to switch state 0->1
@@ -30,6 +33,14 @@ def obstacle_detect(node):
 
 #Avoid obstacles by doing a half circle to the right, triggered when obstacle_detect() returns 1
 def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
+    #####################################################
+    # x,y  : coordinates of the thymio
+    # shortest path : list of the coordinates of the path
+    # index : position of obstacle in the shortest path
+    #####
+    # avoids an obstacle in the shortest path, goes around it and finds the path again
+    #####################################################
+
     obstThrL = 20 
     obst_avoid_state = 1
     complete = False
@@ -38,14 +49,12 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
     Ts = 0.1
     obj_x = shortest_path[0][index+1]
     obj_y = shortest_path[1][index+1]
-    #shortest_path = np.transpose(shortest_path)
-    shortest_path_local = shortest_path #[:index]
+    shortest_path_local = shortest_path 
     print("shortest_path_local", shortest_path_local)
     x_robot = x
     y_robot = y
     print("obj x,y",obj_x,obj_y)
     print("act x,y",x,y,mc.orientation)
-    #rotate 90 deg relative
     mc.orientation = turn(mc,x_robot,y_robot,TURN_90)
     mc.adjust_angle(vision)
     obst_avoid_state = OBST_HORIZONTAL_MOVE
@@ -66,16 +75,12 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
                     x_robot,y_robot = coordinate_increment(mc,np.floor(1+distance),x_robot,y_robot)
                     print("x,y",x_robot,y_robot)
                     obst_avoid_state = OBST_VERTICAL_MOVE
-                    #complete = 1
             else:
                 if not going_left:
                     mc.orientation = turn(mc,x_robot,y_robot,TURN_M90)
                     mc.orientation = turn(mc,x_robot,y_robot,TURN_M90)
                     mc.adjust_angle(vision)
                     going_left = True
-                # else: 
-                #     mc.orientation = turn(x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
-                #     going_left = False
         
         elif obst_avoid_state == OBST_VERTICAL_MOVE:
             if going_left and wrong_move:
@@ -111,8 +116,6 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
                     return complete,x_robot,y_robot         
 
         elif obst_avoid_state == OBST_TO_PATH:
-            obst_forward = False
-            counter_stuck = 0
             if going_left:
                 mc.orientation = turn(mc,x_robot,y_robot,TURN_90)
             else:
@@ -126,12 +129,6 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
                 x_robot,y_robot = coordinate_increment(mc,1, x_robot,y_robot)
                 print("x,y, ORIENTATION",x_robot,y_robot, mc.orientation)
                 while (x_robot!=obj_x) or (y_robot!=obj_y):
-                    counter_stuck += 1
-                    print("not complete")
-                    print(" x robot : ", x_robot)
-                    print(" y robot : ", y_robot)
-                    print(" x obj : ", obj_x)
-                    print(" y obj : ", obj_y)
                     if (x_robot,y_robot) in shortest_path_local:
                         complete = 1
                         return complete,x_robot,y_robot
@@ -141,39 +138,34 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
                         if not obstacle_detect(node):
                             move_adjust(mc, client, Ts, obst_forw, mc.step_duration)
                             x_robot,y_robot = coordinate_increment(mc,1,x_robot,y_robot)
-                            print("x,y",x_robot,y_robot)
-                            counter_stuck = 0
                     if x_robot<obj_x:
                         mc.orientation = turn(mc,1,0)
                         mc.adjust_angle(vision)
                         if not obstacle_detect(node):
                             move_adjust(mc, client, Ts, obst_forw, mc.step_duration)
                             x_robot,y_robot= coordinate_increment(mc, 1,x_robot,y_robot)
-                            print("x,y",x_robot,y_robot)
-                            counter_stuck = 0
                     if y_robot>obj_y:
                         mc.orientation = turn(mc,0,-1)
                         mc.adjust_angle(vision)
                         if not obstacle_detect(node):
                             move_adjust(mc, client, Ts, obst_forw, mc.step_duration)
                             x_robot,y_robot = coordinate_increment(mc,1,x_robot,y_robot)
-                            print("x,y",x_robot,y_robot)
-                            counter_stuck = 0
                     if y_robot<obj_y:
                         mc.orientation = turn(mc,0,1)
                         mc.adjust_angle(vision)
                         if not obstacle_detect(node):
                             move_adjust(mc, client, Ts, obst_forw, mc.step_duration)
                             x_robot,y_robot = coordinate_increment(mc,  1,x_robot,y_robot)
-                            print("x,y",x_robot,y_robot)
-                            counter_stuck = 0
-                    # if counter_stuck > 5:
-                    #     mc.orientation = turn(mc,x_robot,y_robotTURN_90)
-                    #     mc.adjust_angle(vision)
                 complete = 1
     return complete,x_robot,y_robot
     
 def turn(mc,x,y,turn = 10):
+    #####################################################
+    # x,y  : coordinates of the thymio
+    # turn : number of times we want the thymio to turn (1 for 90°, -1 for -90°)
+    #####
+    # makes the robot turn depending on either the coordinates or the value given in turn
+    #####################################################
     if turn == 10:
         turn = mc.get_turn(x,y,mc.orientation)
     orientation_new = (mc.orientation + turn)%4
@@ -184,6 +176,13 @@ def turn(mc,x,y,turn = 10):
     return orientation_new
 
 def move_adjust(mc, client, Ts, obst_forw, step_duration):
+    #####################################################
+    # Ts  : constante
+    # obst_forw : boolean telling if an obstacle is detected
+    # step_duration : constante
+    #####
+    # makes the robot turn depending on either the coordinates or the value given in turn
+    #####################################################
     start_move = time.time()
     step_done = False
     while (step_done == False):
@@ -202,6 +201,14 @@ def move_adjust(mc, client, Ts, obst_forw, step_duration):
     mc.motors(0, 0)
 
 def move_forward(mc, node, client, Ts, obstThrL,going_left):
+    #####################################################
+    # Ts  : constante
+    # going_left : boolean telling if the thymio goes around the left or the right of the obstacle
+    #obstThrL : constante
+    #####
+    # makes the robot go forward until either the sensors on the side don't detect the obstacle anymore
+    #  or if there is an obstacle in the front
+    #####################################################
     start_move = time.time()
     obstacle_front = False
     aw(node.wait_for_variables({"prox.horizontal"}))
@@ -225,6 +232,12 @@ def move_forward(mc, node, client, Ts, obstThrL,going_left):
     return time_spent,obstacle_front
 
 def coordinate_increment(mc, value,x,y):
+    #####################################################
+    # x,y  : coordinates of the thymio
+    # value :value we want to add to the coordinates
+    #####    
+    # actualizes the coordinates of the robot after a move forward depending on the orientation
+    #####################################################
     x_new = x
     y_new = y
     if mc.orientation == 0:

@@ -2,11 +2,6 @@
 import numpy as np
 from tdmclient import aw
 import math
-import time
-# import local_nav as ln
-from djikstra import djikstra_algo,create_plot
-from kalmanfilter import KalmanFilter
-
 
 DEBUG = False
 class MotionControl(object):
@@ -23,97 +18,9 @@ class MotionControl(object):
         self.step_duration = 0
         self.turn_duration = 0
         self.angle_threshold = 7            # Threshold set experimentally, above which we do not correct the angle
-        self
 
 
-    # def start_locomotion(self, half_cell_width, vision):
-    #     self.step_duration = half_cell_width*2 / (self.SPEED_AVG * self.speed_conversion)  # a mettre dans la classe
-    #     self.turn_duration = 98 / (self.SPEED_AVG * self.speed_conversion)
-    #     # A TOUT METTRE DANS MOTION CONTROL
-    #     restart = True
-    #     jump = False
-    #     jump_x, jump_y = 0,0
-    #     ajdust = 0
-    #     index = 0
-    #     MARGIN = 30
-    #     while (restart == True):
-    #         restart = False
-    #         vision.update_coordinates()
-    #         if(DEBUG == True):
-    #             print("thymio real pos : ", vision.thymio_real_pos)
-    #             print("thymio pos in grid : ", vision.thymio_position)
-    #             print("goal pos : ", vision.goal_position)
-    #             print("thymio angle = :", vision.thymio_orientation)
-    #         vision.grid[vision.thymio_position[1]][vision.thymio_position[0]] = 0
-    #         vision.grid[vision.goal_position[1]][vision.goal_position[0]] = 0
-    #         shortest_path = djikstra_algo(vision.grid.T, vision.thymio_position, vision.goal_position)
-    #         if(DEBUG == True):
-    #             print(shortest_path)
-    #         KF = KalmanFilter(self.dt, vision.thymio_real_pos, mc..speed_conversion, Q_cam, Q_gnd, R_cam, R_gnd)  # we initialize the filter
-    #         self.orientation = self.correct_orientation(vision.thymio_orientation)
-    #         x = vision.thymio_position[0]
-    #         y = vision.thymio_position[1]
-    #         turn_speed = np.array([0, 0])
-    #         for dx,dy in np.transpose(shortest_path):
-    #             if jump:
-    #                 x = dx      #actualize the coordinates of the robot
-    #                 y = dy      #actualize the coordinates of the robot
-    #                 index += 1
-    #                 if jump_x == dx and jump_y == dy:
-    #                     jump = False
-    #                 continue  
-    #             vision.update_coordinates()
-    #             if (not vision.same_goal):
-    #                 restart = True
-    #                 break
-    #             turn = self.get_turn(dx-x,dy-y,self.orientation)
-    #             self.orientation = (self.orientation + turn)%4
-    #             for i in range(abs(turn)):
-    #                 self.robot_turn(np.sign(turn))
-    #             self.adjust_angle(vision)
-    #             if (((dx-x)!=0) | ((dy-y)!=0)):
-    #                 local = ln.obstacle_detect(self.node)
-    #                 if local:
-    #                     if(DEBUG == True):
-    #                         print("obstacle",len(shortest_path[1]))
-    #                     if (index+2) > len(shortest_path[1]):
-    #                         jump,jump_x,jump_y = ln.obstacle_avoid(vision, self, x, y, shortest_path, len(shortest_path[1]), self.node, self.client)
-    #                     else:
-    #                         jump,jump_x,jump_y = ln.obstacle_avoid(vision, self, x, y, shortest_path, index, self.node, self.client)
-    #                 else:   
-    #                     if (((dx-x)!=0) | ((dy-y)!=0)):
-    #                         step_done = False
-    #                         start_move = time.time()
-    #                         self.motors(self.speed[0], self.speed[1])
-    #                         temp = 0
-    #                         next_target_x = dx *half_cell_width*2 + half_cell_width
-    #                         next_target_y = (vision.rows - 1 - dy) *half_cell_width*2 + half_cell_width
-                            
-    #                         while (step_done != True):  
-    #                             vision.update_coordinates()
-    #                             kalman_pos= KF.filter(vision.thymio, vision.thymio_real_pos, self.orientation, self.speed, vision.thymio_orientation, 0, 0, GND_THRESHOLD)  # A CHANGER AVEC LES VRAIES VALEURS
-    #                             # if(DEBUG == True):
-    #                             #     print("estimated position ", kalman_pos)
-    #                             #     print("position from camera ", vision.thymio_real_pos)
-    #                             delta_x, delta_y= self.kalman_adjust(next_target_x, next_target_y, kalman_pos, vision.thymio_orientation)
-    #                             # if(DEBUG == True):
-    #                             #     print((correcting_speed_x, correcting_speed_y))
-    #                             current = time.time()
-    #                             temp = current - start_move
-    #                             if((np.abs(delta_x) < MARGIN) & (np.abs(delta_y) < MARGIN)):
-    #                                 step_done = True
-    #                                 self.motors(0, 0) 
-    #                             elif(temp > self.step_duration):
-    #                                 step_done = True  
-    #                                 self.motors(0, 0)
-                        
-    #                         self.adjust_angle(vision)
-
-    #             x = dx      #actualize the coordinates of the robot
-    #             y = dy      #actualize the coordinates of the robot
-    #         index += 1
-
-
+        
     def motors(self, left, right):
         #####################################################
         # left  : desired speed for the left motor
@@ -152,11 +59,11 @@ class MotionControl(object):
 
     def get_turn(self, x,y, orientation):
         #####################################################
-        # x             :
-        # y             :
-        # orientation   :
+        # x             : futur coordinate on the grid 
+        # y             : futur coordinate on the grid 
+        # orientation   : actual orientation of the robot
         #####
-        # computes the turn 
+        # computes the turn neccessary to reach the new orientation from the actual orientation
         #####################################################
         if((x==1) & (y==0)):
             orientation_des = 0
@@ -206,6 +113,12 @@ class MotionControl(object):
         return delta_x, delta_y
 
     def adjust_angle(self, vision):
+        #####################################################
+        # vision : used to get vision.thymio_orientation which gives the angle of the thymio
+        #####
+        #  computes the error angle between the orientation desired from motion control and the actual angle of the robot 
+        #  according to the camera
+        #####################################################
         vision.update_coordinates()  
         turn_speed_l = 0
         turn_speed_r = 0
@@ -226,9 +139,10 @@ class MotionControl(object):
 
     def robot_turn(self, signturn):  
         #####################################################
-        # signturn : sign that tells if the thymio should turn left or right. (-) for left, (+) for right A VERIFIER
+        # signturn : sign that tells if the thymio should turn left or right. (-) for left, (+) for right
         #####
-        #  
+        #  depending on the sign, makes the robot turn left of right with respect to the center of the cell 
+        # (not the center of rotation of the thymio)
         #####################################################
         turn_duration2 = 55 / (self.SPEED_AVG * self.speed_conversion)
         turn_duration1 = 20 / (self.SPEED_AVG * self.speed_conversion)
