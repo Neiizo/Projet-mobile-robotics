@@ -24,8 +24,8 @@ class Vision:
         self.width = None           # width of the image
         self.height = None          # height of the image
 
-        self.offset = 0                     # offset to apply in order not to cut the robots on the border
-        self.y_offset = -45                 # due to our setup
+        self.offset = 10                    # offset to apply in order not to cut the robots on the border
+        self.y_offset = -50                 # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
@@ -43,6 +43,7 @@ class Vision:
         self.thymio_orientation = None      # thymio's orientation (in deg, trigonometric)
         self.thymio_deviation = None        # distance (mm) from center of cell
         self.thymio_real_pos = None         # position in the grid in mm 
+        self.thymio_list_pos = []
         self.goal_position = None           # goal's position in the grid
 
         self.cap = cv2.VideoCapture(0)  
@@ -257,7 +258,7 @@ class Vision:
             for j in range(0, self.columns):
                 cell = thresh1[(k*self.celly + error + self.offset):((k+1)*self.celly + error + self.offset), (j*self.cellx + error + self.offset):((j+1)*self.cellx + error + self.offset)]
                 m = np.average(cell)
-                if m > t:
+                if m > 255-t:
                     data[k, j] = 0
         self.grid = data
 
@@ -311,7 +312,7 @@ class Vision:
         _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
         cv2.imwrite('intermediate/arucotest.png',thresh)
 
-        arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
+        arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
         arucoParams = cv2.aruco.DetectorParameters_create()
         (corners, ids, rejected) = cv2.aruco.detectMarkers(thresh, arucoDict,parameters=arucoParams)
         return corners,ids
@@ -344,13 +345,23 @@ class Vision:
                 self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
                 centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(self.img_final.shape[0] - self.offset - centre[1]))
                 self.thymio_real_pos = np.array([[centre[0]], [centre[1]+self.y_offset]])
+                self.thymio_list_pos.append([self.thymio_real_pos[0] - self.offset*self.conversion_factor_x, self.thymio_real_pos[1] - self.offset*self.conversion_factor_y])
 
             if ids[c][0] == 1: #goal
                 self.goal = True
                 self.goal_position = self.compute_coordinates(centre)
 
             
+    def compare_path(self, shortest_path):
+        shortest_path_img = np.array([shortest_path[0]*self.cellx - self.offset, shortest_path[1]*self.celly - self.offset])
+        path = cv2.imread('output/transformedImage.png', cv2.IMREAD_COLOR)
+        for p in self.thymio_list_pos:
+            cv2.circle(path, (int(p[0][0]), int(p[1][0])), 2, (0,255,0), 30)
 
+        for c in range(1, len(shortest_path_img[0])):
+            cv2.line(path, (shortest_path_img[0][c-1], shortest_path_img[1][c-1]), 
+                            (shortest_path_img[0][c], shortest_path_img[1][c]), (0,0,255), 3)
+        return path
 
 
     def update_coordinates(self):

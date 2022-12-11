@@ -20,8 +20,10 @@ class data(object):
         self.speed_conversion = speed_conversion
         self.r_nu = r_nu
         self.q_nu = self.r_nu
+        self.q_p_cam = 0.25
+        self.r_p_cam = 0.
 
-    def calibration_mm(self):
+    def calibration_mm(self, mc):
         if (self.speed_conversion*self.r_nu) == 0:
             if(self.speed_conversion != 0):
                 print("########################")
@@ -43,7 +45,7 @@ class data(object):
             end = 0
             thymio_data = []
 
-            mc.motors(self.node, self.speed_x, self.speed_y)
+            mc.motors(self.speed_x, self.speed_y)
             while(onLine == True):
                 aw(self.node.wait_for_variables())
                 self.get_data(thymio_data)
@@ -60,21 +62,22 @@ class data(object):
                     pass
                 else:
                     end = time.time()
-                    mc.motors(self.node,0,0)
+                    mc.motors(0,0)
                     aw(self.client.sleep(self.dt))
                     onLine = False
                     self.compute_data(start, end, startIter, thymio_data)
                     print("YOU ARE IN A 'CALIBRATION' MODE. IF YOU WISH TO STOP THE CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
                     print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node, {self.speed_conversion}, {self.r_nu})")
-                    print("cal_data.calibration_mm()")
+                    print("cal_data.calibration_mm(mc)")
                     print("########################")
                 iter = iter + 1
         else:
             self.speed_mms =self.speed_conversion * self.speed_y
             self.show_data()
+            mc.speed_conversion = self.speed_conversion
             print("YOU ARE IN A 'NO CALIBRATION' MODE. IF YOU WISH TO RUN CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
             print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node)")
-            print("cal_data.calibration_mm()")
+            print("cal_data.calibration_mm(mc)")
             print("########################")
         self.calibrated = 0 
 
@@ -150,14 +153,11 @@ class data(object):
             vision = av.Vision(test_threshold)
 
         
-        # vision = av.Vision(cam_threshold)
-        r_p_cam = 0.01 
-        q_p_cam = 0.01 
-        Q_cam = np.array([self.q_nu, q_p_cam])
-        R_cam = np.array([self.q_nu, r_p_cam])
+        Q_cam = np.array([self.q_p_cam, self.q_nu])
+        R_cam = np.array([self.r_p_cam, self.r_nu])
         r_p_gnd = 0.25 
         q_p_gnd = 0.04
 
-        Q_gnd = np.array([self.q_nu, q_p_gnd])
-        R_gnd = np.array([self.q_nu, r_p_gnd])
+        Q_gnd = np.array([q_p_gnd, self.q_nu])
+        R_gnd = np.array([r_p_gnd, self.r_nu])
         return vision, Q_cam, R_cam, Q_gnd, R_gnd   
