@@ -3,6 +3,19 @@ import numpy as np
 import time as time
 from tdmclient import aw
 
+# class LocalNav(object):
+#     def __init__(self, node, client, SPEED_R, SPEED_L):
+#         self.node = node
+#         self.client = client
+#         self.speed = np.array([SPEED_L, SPEED_R])
+        
+#         self.TURN_M90 = 1
+
+#         self.OBST_AVOID = 1
+#         self.OBST_HORIZONTAL_MOVE = 2
+#         self.OBST_VERTICAL_MOVE = 3
+#         self.OBST_TO_PATH
+
 TURN_90 = -1
 TURN_M90 = 1
 
@@ -15,7 +28,7 @@ OBST_TO_PATH = 4
 def obstacle_detect(node):
 
     obstThrL = 10      # low obstacle threshold to switch state 1->0
-    obstThrH = 3000      # high obstacle threshold to switch state 0->1
+    obstThrH = 2000      # high obstacle threshold to switch state 0->1
 
     state = 0          # 0=shortest path, 1=obstacle avoidance
     obst = [0,0,0]     # measurements from left, middle and right prox sensors
@@ -30,7 +43,7 @@ def obstacle_detect(node):
 
 
 #Avoid obstacles by doing a half circle to the right, triggered when obstacle_detect() returns 1
-def obstacle_avoid(x,y,orientation, shortest_path, index, speed, step_duration, speed_conversion, node, client):
+def obstacle_avoid(vision, mc, x,y, shortest_path, index, speed, step_duration, speed_conversion, node, client):
     obstThrL = 20 
     obst_avoid_state = 1
     complete = False
@@ -43,123 +56,135 @@ def obstacle_avoid(x,y,orientation, shortest_path, index, speed, step_duration, 
     print("shortest_path_local", shortest_path_local)
     x_robot = x
     y_robot = y
-    o_robot = orientation
     print("obj x,y",obj_x,obj_y)
-    print("act x,y",x,y,orientation)
+    print("act x,y",x,y,mc.orientation)
     #rotate 90 deg relative
-    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+    mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+    mc.adjust_angle(vision)
     obst_avoid_state = OBST_HORIZONTAL_MOVE
     while not complete:
         if obst_avoid_state == OBST_HORIZONTAL_MOVE:
             if  not obstacle_detect(node): # STEP 1
-                time_spent,obst_forw = move_forward(node, client, speed, Ts, obstThrL, going_left)
+                time_spent,obst_forw = move_forward(mc, node, client, speed, Ts, obstThrL, going_left)
                 distance = time_spent/step_duration
                 if obst_forw:
-                    move_adjust(node, client, speed, Ts, obst_forw, (distance%1)*step_duration)
-                    x_robot,y_robot = coordinate_increment(o_robot, np.floor(distance),x_robot,y_robot)
-                    print("x,y",x_robot,y_robot, o_robot)
-                    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                    move_adjust(mc, client, speed, Ts, obst_forw, (distance%1)*step_duration)
+                    x_robot,y_robot = coordinate_increment(mc, np.floor(distance),x_robot,y_robot)
+                    print("x,y",x_robot,y_robot)
+                    mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                    mc.adjust_angle(vision)
                 else:
                     print(distance)
-                    move_adjust(node, client, speed, Ts, obst_forw, (1-distance%1)*step_duration)
-                    x_robot,y_robot = coordinate_increment(o_robot, np.floor(1+distance),x_robot,y_robot)
-                    print("x,y",x_robot,y_robot, o_robot)
+                    move_adjust(mc, client, speed, Ts, obst_forw, (1-distance%1)*step_duration)
+                    x_robot,y_robot = coordinate_increment(mc,np.floor(1+distance),x_robot,y_robot)
+                    print("x,y",x_robot,y_robot)
                     obst_avoid_state = OBST_VERTICAL_MOVE
                     #complete = 1
             else:
                 if not going_left:
-                    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
-                    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                    mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                    mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                    mc.adjust_angle(vision)
                     going_left = True
                 # else: 
-                #     o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                #     mc.orientation = turn(x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
                 #     going_left = False
         
         elif obst_avoid_state == OBST_VERTICAL_MOVE:
             if going_left:
-                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                mc.adjust_angle(vision)
             else:
-                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
-            time_spent,obst_forw = move_forward(node, client, speed, Ts, obstThrL, going_left)
+                mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                mc.adjust_angle(vision)
+            time_spent,obst_forw = move_forward(mc, node, client, speed, Ts, obstThrL, going_left)
             distance = time_spent/step_duration
             if obst_forw:
-                move_adjust(node, client, speed, Ts, obst_forw, (distance%1)*step_duration)
-                x_robot,y_robot = coordinate_increment(o_robot, np.floor(distance),x_robot,y_robot)
-                print("x,y",x_robot,y_robot, o_robot)
-                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                move_adjust(mc, client, speed, Ts, obst_forw, (distance%1)*step_duration)
+                x_robot,y_robot = coordinate_increment(mc,np.floor(distance),x_robot,y_robot)
+                print("x,y",x_robot,y_robot)
+                mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                mc.adjust_angle(vision)
                 obst_avoid_state = OBST_HORIZONTAL_MOVE
                 if (x_robot == obj_x) and (y_robot == obj_y):
                     complete = 1
             else:
                 print("vertical",distance)
-                move_adjust(node, client, speed, Ts, obst_forw, (1-distance%1)*step_duration)
-                x_robot,y_robot = coordinate_increment(o_robot, np.floor(1+distance),x_robot,y_robot)
-                print("x,y",x_robot,y_robot, o_robot)
+                move_adjust(mc, client, speed, Ts, obst_forw, (1-distance%1)*step_duration)
+                x_robot,y_robot = coordinate_increment(mc, np.floor(1+distance),x_robot,y_robot)
+                print("x,y",x_robot,y_robot)
                 obst_avoid_state = OBST_TO_PATH
                 if (x_robot,y_robot) in shortest_path_local:
                     complete = 1
-                    return complete,x_robot,y_robot,o_robot            
+                    return complete,x_robot,y_robot         
 
         elif obst_avoid_state == OBST_TO_PATH:
             obst_forward = False
             counter_stuck = 0
             if going_left:
-                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                mc.adjust_angle(vision)
             else:
-                o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                mc.orientation = turn(mc, x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_M90)
+                mc.adjust_angle(vision)
             if not obstacle_detect(node):
-                move_adjust(node, client, speed, Ts, obst_forw, step_duration)
-                x_robot,y_robot = coordinate_increment(o_robot, 1,x_robot,y_robot)
-                print("x,y",x_robot,y_robot, o_robot)
+                move_adjust(mc, client, speed, Ts, obst_forw, step_duration)
+                x_robot,y_robot = coordinate_increment(mc,1, x_robot,y_robot)
+                print("x,y",x_robot,y_robot, mc.orientation)
             while (x_robot!=obj_x) or (y_robot!=obj_y):
                 counter_stuck += 1
                 if (x_robot,y_robot) in shortest_path_local:
                     complete = 1
-                    return complete,x_robot,y_robot,o_robot
+                    return complete,x_robot,y_robot
                 if x_robot>obj_x:
-                    o_robot = turn(o_robot,-1,0,speed[0],speed_conversion, node, client)
+                    mc.orientation = turn(mc,-1,0,speed[0],speed_conversion, node, client)
+                    mc.adjust_angle(vision)
                     if not obstacle_detect(node):
-                        move_adjust(node, client, speed, Ts, obst_forw, step_duration)
-                        x_robot,y_robot = coordinate_increment(o_robot, 1,x_robot,y_robot)
-                        print("x,y",x_robot,y_robot, o_robot)
+                        move_adjust(mc, client, speed, Ts, obst_forw, step_duration)
+                        x_robot,y_robot = coordinate_increment(mc,1,x_robot,y_robot)
+                        print("x,y",x_robot,y_robot)
                         counter_stuck = 0
                 if x_robot<obj_x:
-                    o_robot = turn(o_robot,1,0,speed[0],speed_conversion, node, client)
+                    mc.orientation = turn(mc,1,0,speed[0],speed_conversion, node, client)
+                    mc.adjust_angle(vision)
                     if not obstacle_detect(node):
-                        move_adjust(node, client, speed, Ts, obst_forw, step_duration)
-                        x_robot,y_robot= coordinate_increment(o_robot, 1,x_robot,y_robot)
-                        print("x,y",x_robot,y_robot, o_robot)
+                        move_adjust(mc, client, speed, Ts, obst_forw, step_duration)
+                        x_robot,y_robot= coordinate_increment(mc, 1,x_robot,y_robot)
+                        print("x,y",x_robot,y_robot)
                         counter_stuck = 0
                 if y_robot>obj_y:
-                    o_robot = turn(o_robot,0,-1,speed[0],speed_conversion, node, client)
+                    mc.orientation = turn(mc,0,-1,speed[0],speed_conversion, node, client)
+                    mc.adjust_angle(vision)
                     if not obstacle_detect(node):
-                        move_adjust(node, client, speed, Ts, obst_forw, step_duration)
-                        x_robot,y_robot = coordinate_increment(o_robot, 1,x_robot,y_robot)
-                        print("x,y",x_robot,y_robot, o_robot)
+                        move_adjust(mc, client, speed, Ts, obst_forw, step_duration)
+                        x_robot,y_robot = coordinate_increment(mc,1,x_robot,y_robot)
+                        print("x,y",x_robot,y_robot)
                         counter_stuck = 0
                 if y_robot<obj_y:
-                    o_robot = turn(o_robot,0,1,speed[0],speed_conversion, node, client)
+                    mc.orientation = turn(mc,0,1,speed[0],speed_conversion, node, client)
+                    mc.adjust_angle(vision)
                     if not obstacle_detect(node):
-                        move_adjust(node, client, speed, Ts, obst_forw, step_duration)
-                        x_robot,y_robot = coordinate_increment(o_robot, 1,x_robot,y_robot)
-                        print("x,y",x_robot,y_robot, o_robot)
+                        move_adjust(mc, client, speed, Ts, obst_forw, step_duration)
+                        x_robot,y_robot = coordinate_increment(mc,  1,x_robot,y_robot)
+                        print("x,y",x_robot,y_robot)
                         counter_stuck = 0
-                if counter_stuck > 5:
-                    o_robot = turn(o_robot,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                # if counter_stuck > 5:
+                #     mc.orientation = turn(mc,x_robot,y_robot,speed[0],speed_conversion, node, client,TURN_90)
+                #     mc.adjust_angle(vision)
             complete = 1
-    return complete,x_robot,y_robot,o_robot
+    return complete,x_robot,y_robot
     
-def turn(o_robot,x,y,SPEED_X,speed_conversion, node, client,turn = 10):
+def turn(mc,x,y,SPEED_X,speed_conversion, node, client,turn = 10):
     if turn == 10:
-        turn = mc.get_turn(x,y,o_robot)
-    o_robot_new = (o_robot + turn)%4
-    if o_robot_new<0:
-        o_robot_new = o_robot_new+4
+        turn = mc.get_turn(x,y,mc.orientation)
+    mc.orientation_new = (mc.orientation + turn)%4
+    if mc.orientation_new<0:
+        mc.orientation_new = mc.orientation_new+4
     for i in range(abs(turn)):
-        mc.robot_turn(np.sign(turn),SPEED_X,speed_conversion, node, client)
-    return o_robot_new
+        mc.robot_turn(np.sign(turn))
+    return mc.orientation_new
 
-def move_adjust(node, client, speed, Ts, obst_forw, step_duration):
+def move_adjust(mc, client, speed, Ts, obst_forw, step_duration):
     start_move = time.time()
     step_done = False
     while (step_done == False):
@@ -173,11 +198,11 @@ def move_adjust(node, client, speed, Ts, obst_forw, step_duration):
             else :
                 speed_x = int(speed[0])
                 speed_y = int(speed[1]) 
-            mc.motors(node, speed_x, speed_y)
+            mc.motors(speed_x, speed_y)
             aw(client.sleep(Ts))
-    mc.motors(node,0, 0)
+    mc.motors(0, 0)
 
-def move_forward(node, client, speed, Ts, obstThrL,going_left):
+def move_forward(mc, node, client, speed, Ts, obstThrL,going_left):
     start_move = time.time()
     obstacle_front = False
     aw(node.wait_for_variables({"prox.horizontal"}))
@@ -194,21 +219,21 @@ def move_forward(node, client, speed, Ts, obstThrL,going_left):
         prox_sensor = node.v.prox.horizontal[i]
         speed[0] = int(speed[0]) #je reutilise juste les variables
         speed[1] = int(speed[1]) 
-        mc.motors(node, speed[0], speed[1])
+        mc.motors(speed[0], speed[1])
         aw(client.sleep(Ts))
     time_spent = time.time() - start_move   
-    mc.motors(node,0, 0)
+    mc.motors(0, 0)
     return time_spent,obstacle_front
 
-def coordinate_increment(o_robot, value,x,y):
+def coordinate_increment(mc, value,x,y):
     x_new = x
     y_new = y
-    if o_robot == 0:
+    if mc.orientation == 0:
         x_new = x+value
-    elif o_robot == 1:
+    elif mc.orientation == 1:
         y_new = y-value
-    elif o_robot == 2:
+    elif mc.orientation == 2:
         x_new = x-value
-    elif o_robot == 3:
+    elif mc.orientation == 3:
         y_new = y+value
     return x_new,y_new

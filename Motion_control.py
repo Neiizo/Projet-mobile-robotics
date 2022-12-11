@@ -9,7 +9,7 @@ class MotionControl(object):
         self.node = node                    
         self.client = client
         self.dt = dt                        # Sampling time in [s]
-        self.orientation1 = 0
+        self.orientation = 0
         self.speed_conversion = 0           # Speed conversion from the thymio's speed to [mm/s]. This value is set by our calibration process
         self.kp = 1.5                       # Proportionnal gain, used for our orientation correction. This has been set experimentally
         self.speed = np.array([SPEED_L, SPEED_R])   # speed for our thymio's command, set in thymio's unit
@@ -37,24 +37,24 @@ class MotionControl(object):
 
 
 
-    def correct_orientation(self, orientation):
+    def correct_orientation(self, vis_dir):
         #####################################################
         # orientation :
         #####
         # 
         #####################################################
-        if((orientation > 90 - self.MARGIN) & (orientation < 90 + self.MARGIN)):
-            self.orientation1 = 1
-            return self.orientation1 # a enlever une fois que le reste sera dans le même fichier
-        elif((orientation > 180 - self.MARGIN) & (orientation < 180 + self.MARGIN)):
-            self.orientation1 = 2
-            return self.orientation1 # a enlever une fois que le reste sera dans le même fichier
-        elif((orientation > 270 - self.MARGIN) & (orientation < 270 + self.MARGIN)):
-            self.orientation1 = 3
-            return self.orientation1 # a enlever une fois que le reste sera dans le même fichier
+        if((vis_dir > 90 - self.MARGIN) & (vis_dir < 90 + self.MARGIN)):
+            self.orientation = 1
+            return self.orientation # a enlever une fois que le reste sera dans le même fichier
+        elif((vis_dir > 180 - self.MARGIN) & (vis_dir < 180 + self.MARGIN)):
+            self.orientation = 2
+            return self.orientation # a enlever une fois que le reste sera dans le même fichier
+        elif((vis_dir > 270 - self.MARGIN) & (vis_dir < 270 + self.MARGIN)):
+            self.orientation= 3
+            return self.orientation # a enlever une fois que le reste sera dans le même fichier
         else:
-            self.orientation1 = 0
-            return self.orientation1 # a enlever une fois que le reste sera dans le même fichier
+            self.orientation = 0
+            return self.orientation # a enlever une fois que le reste sera dans le même fichier
 
 
 
@@ -65,20 +65,20 @@ class MotionControl(object):
         # computes the turn 
         #####################################################
         if((x==1) & (y==0)):
-            dir = 0
+            orientation_des = 0
         elif((x==0) & (y==-1)):
-            dir = 1
+            orientation_des = 1
         elif((x==-1) & (y==0)):
-            dir = 2
+            orientation_des = 2
         elif((x==0) & (y==1)):
-            dir = 3
+            orientation_des = 3
         else:
-            dir = orientation
-        new_orientation = dir - orientation
-        if abs(new_orientation) > 2:
-            return (new_orientation) - 4*np.sign(new_orientation)
+            orientation_des = orientation
+        turn_orientation = orientation_des - orientation
+        if abs(turn_orientation) > 2:
+            return (turn_orientation) - 4*np.sign(turn_orientation)
         else:
-            return new_orientation
+            return turn_orientation
 
 
 
@@ -99,30 +99,33 @@ class MotionControl(object):
         delta_angle = desired_angle - angle
         
         if(np.abs(delta_angle) > 270):
-            delta_angle = delta_angle - np.sign(delta_angle)*360 # A VERIFIER
-        #    if(delta_angle < -270):
-        #       delta_angle = delta_angle + 360
+            delta_angle = delta_angle - np.sign(delta_angle)*360
         
         if(np.abs(delta_angle) > self.angle_threshold): 
             adjust_turn = (int)(np.round(self.kp * delta_angle))
-        return delta_x, delta_y, adjust_turn
+        if(adjust_turn != 0):
+            correcting_speed_x = self.speed[0] - adjust_turn
+            correcting_speed_y = self.speed[1] + adjust_turn
+            self.motors(correcting_speed_x, correcting_speed_y)
+            aw(self.client.sleep(2*self.dt))
+            self.motors(self.speed[0], self.speed[1])
+        return delta_x, delta_y
 
     def adjust_angle(self, vision):
-        # vision.update_coordinates()  
-        # if(vision.thymio == True): # faire que si on voit le thymio
-        #     angle = vision.thymio_orientation # angle of the robot
-        #     if((orientation == 0) & (angle > 270)):  
-        #         adjust_angle = angle - 360
-        #     else:
-        #         adjust_angle = angle - orientation*90 
-        #     # if(DEBUG == True):
-        #     #     print("adjust angle before moving :", adjust_angle)   
-        #     self.turn_speed[0] = int(self.speed[0]*np.sign(adjust_angle))
-        #     self.turn_speed[1] = int(-self.speed[1]*np.sign(adjust_angle))
-        #     self.motors(self.turn_speed[0], self.turn_speed[1])
-        #     aw(self.client.sleep(5*abs(adjust_angle)//180)) # a changer pour un check sur time ?
-        #     self..motors(0, 0)
-        a =1
+        vision.update_coordinates()  
+        if(vision.thymio == True): # faire que si on voit le thymio
+            angle = vision.thymio_orientation # angle of the robot
+            if((self.orientation == 0) & (angle > 270)):  
+                adjust_angle = angle - 360
+            else:
+                adjust_angle = angle - self.orientation*90 
+            # if(DEBUG == True):
+            #     print("adjust angle before moving :", adjust_angle)   
+            self.turn_speed[0] = int(self.speed[0]*np.sign(adjust_angle))
+            self.turn_speed[1] = int(-self.speed[1]*np.sign(adjust_angle))
+            self.motors(self.turn_speed[0], self.turn_speed[1])
+            aw(self.client.sleep(5*abs(adjust_angle)//180)) # a changer pour un check sur time ?
+            self.motors(0, 0)
 
 
     def robot_turn(self, signturn):  

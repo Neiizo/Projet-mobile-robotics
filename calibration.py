@@ -103,40 +103,20 @@ class data(object):
         print(f"The standard deviation from the speed state (q_nu) and speed measurement (r_nu) is : {self.q_nu} ")
         print("########################")
 
-    def cam_calibration(self, calibrate, nbAruco, test_threshold = 150):
+    def cam_calibration(self, calibrate, nbAruco, test_threshold = 100):
         if (self.calibrated != 1):
             self.r_nu = 3.1773380067632053
             self.speed_conversion = 0.3210733473116764
             self.q_nu = self.r_nu
         cam_calibrated = False
         valueFound = False
-        # gridDone = False 
-        # threshold_grid = 170
-        # while(gridDone != True):
-        #     vision = av.Vision(threshold_grid)
-        #     count  = np.count_nonzero(vision.grid)
-        #     if(count < nbObstacles):
-        #         if(threshold_grid > 250):
-        #             cam_calibrated = True
-        #             print("SATURATION")
-        #         threshold_grid = threshold_grid + 10
-        #         if(valueFound == True):
-        #             cam_calibrated = True
-        #             print("threshold_grid set to : ", threshold_grid)
-        #     else:
-        #         valueFound = True
-        #         test_threshold = test_threshold - 10
                 
         if(calibrate  == True):
             while(cam_calibrated != True):
                 vision = av.Vision(test_threshold)
                 corners, ids = vision.aruco()
-                print(len(ids))
-                print("test_threshold = ", test_threshold)
                 if(ids is None):
-                    cam_calibrated = True
-                    valueFound = True
-                    test_threshold = test_threshold + 10
+                    test_threshold = test_threshold - 10
                 elif(len(ids) < nbAruco):
                     if(test_threshold > 250):
                         cam_calibrated = True
@@ -149,7 +129,6 @@ class data(object):
                     valueFound = True
                     test_threshold = test_threshold - 10
         else:
-            test_threshold = 150
             vision = av.Vision(test_threshold)
 
         

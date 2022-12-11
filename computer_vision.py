@@ -229,7 +229,13 @@ class Vision:
         out = self.img_mask.copy()
         out = cv2.warpPerspective(self.img, self.transform, (int(self.width), int(self.height)))
         cv2.imwrite('output/transformedImage.png', out)
-        self.img_final = out
+        self.img_final = self.apply_threshold(out)
+        cv2.imwrite('output/thresholdedImage.png', self.img_final)
+
+    def apply_threshold(self, img):
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
+        return thresh
 
     def create_grid(self, error = 0):
         """
@@ -239,13 +245,13 @@ class Vision:
         """
 
         # Apply a threshold to the image
-        t = self.threshold
-        gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
-        _, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
-        cv2.imwrite('intermediate/thresh.png', thresh1)
+        # t = self.threshold
+        # gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
+        # _, thresh1 = cv2.threshold(gray,t,255,cv2.THRESH_BINARY)
+        # cv2.imwrite('intermediate/thresh.png', thresh1)
 
         # Computes size of a cell in the image [pixels]
-        h,w,c = self.img_final.shape
+        h,w = self.img_final.shape
         self.cellx = round((w - 2*self.offset)/self.columns)
         self.celly = round((h - 2*self.offset)/self.rows)
 
@@ -256,15 +262,15 @@ class Vision:
         # For each cell, compute the mean value of pixels, if bigger than threshold --> white
         for k in range(0, self.rows):
             for j in range(0, self.columns):
-                cell = thresh1[(k*self.celly + error + self.offset):((k+1)*self.celly + error + self.offset), (j*self.cellx + error + self.offset):((j+1)*self.cellx + error + self.offset)]
+                cell = self.img_final[(k*self.celly + error + self.offset):((k+1)*self.celly + error + self.offset), (j*self.cellx + error + self.offset):((j+1)*self.cellx + error + self.offset)]
                 m = np.average(cell)
-                if m > 255-t:
+                if m > 255-self.threshold:
                     data[k, j] = 0
         self.grid = data
 
     def show(self):
         # Show the lines of the computed grid --> DEBUGGGG
-        lines = self.img_final.copy()
+        lines = cv2.imread('output/transformedImage.png', cv2.IMREAD_COLOR)
         for k in range(0, self.rows+1):
             cv2.line(lines, (0, self.offset + k*self.celly),(1100, self.offset + k*self.celly), (0,255,0), 3 )
         for j in range(0, self.columns+1):
@@ -306,15 +312,15 @@ class Vision:
         """
             computes the corners and ids of the detected ArUco markers
         """
-        gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
+        # gray = cv2.cvtColor(self.img_final, cv2.COLOR_BGR2GRAY)
 
-        # Apply thresholding
-        _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
-        cv2.imwrite('intermediate/arucotest.png',thresh)
+        # # Apply thresholding
+        # _, thresh = cv2.threshold(gray,self.threshold,255,cv2.THRESH_BINARY)
+        # cv2.imwrite('intermediate/arucotest.png',thresh)
 
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
         arucoParams = cv2.aruco.DetectorParameters_create()
-        (corners, ids, rejected) = cv2.aruco.detectMarkers(thresh, arucoDict,parameters=arucoParams)
+        (corners, ids, rejected) = cv2.aruco.detectMarkers(self.img_final, arucoDict,parameters=arucoParams)
         return corners,ids
 
     def compute_coordinates(self, middle):
@@ -341,11 +347,10 @@ class Vision:
                 self.thymio = True
                 self.thymio_position = self.compute_coordinates(centre)
                 self.thymio_orientation = self.orientation(corners[c][0][1], corners[c][0][2])
-                m_cell = ((self.thymio_position[0] + 0.5)*self.cellx, (self.thymio_position[1] + 0.5)*self.celly)
-                self.thymio_deviation = (self.conversion_factor_x*(centre[0] - m_cell[0]), self.conversion_factor_y*(m_cell[1] - centre[1]))
                 centre = (self.conversion_factor_x*(centre[0]), self.conversion_factor_y*(self.img_final.shape[0] - self.offset - centre[1]))
                 self.thymio_real_pos = np.array([[centre[0]], [centre[1]+self.y_offset]])
-                self.thymio_list_pos.append([self.thymio_real_pos[0] - self.offset*self.conversion_factor_x, self.thymio_real_pos[1] - self.offset*self.conversion_factor_y])
+                self.thymio_list_pos.append([self.thymio_real_pos[0] + self.offset*self.conversion_factor_x, 
+                                            self.img_final.shape[0]*self.conversion_factor_y - (self.thymio_real_pos[1] + self.offset*self.conversion_factor_y)])
 
             if ids[c][0] == 1: #goal
                 self.goal = True
@@ -353,10 +358,10 @@ class Vision:
 
             
     def compare_path(self, shortest_path):
-        shortest_path_img = np.array([shortest_path[0]*self.cellx - self.offset, shortest_path[1]*self.celly - self.offset])
+        shortest_path_img = np.array([(shortest_path[0] + 1)*self.cellx - self.offset, (shortest_path[1] + 1)*self.celly - self.offset])
         path = cv2.imread('output/transformedImage.png', cv2.IMREAD_COLOR)
         for p in self.thymio_list_pos:
-            cv2.circle(path, (int(p[0][0]), int(p[1][0])), 2, (0,255,0), 30)
+            cv2.circle(path, (int(p[0][0]/self.conversion_factor_x), int(p[1][0]/self.conversion_factor_y)), 2, (0,255,0), 3)
 
         for c in range(1, len(shortest_path_img[0])):
             cv2.line(path, (shortest_path_img[0][c-1], shortest_path_img[1][c-1]), 
