@@ -25,7 +25,7 @@ class Vision:
         self.height = None          # height of the image
 
         self.offset = 10                    # offset to apply in order not to cut the robots on the border
-        self.y_offset = -50                 # due to our setup
+        self.y_offset = -55                 # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
@@ -44,7 +44,10 @@ class Vision:
         self.thymio_deviation = None        # distance (mm) from center of cell
         self.thymio_real_pos = None         # position in the grid in mm 
         self.thymio_list_pos = []
-        self.goal_position = None           # goal's position in the grid
+        self.goal_position = (0,0)           # goal's position in the grid
+        self.goal_previous = None
+        self.same_goal = False
+        self.check = True
 
         self.cap = cv2.VideoCapture(0)  
         
@@ -375,11 +378,22 @@ class Vision:
         """
         self.goal = False
         self.thymio = False
+        self.same_goal = False
         self.take_picture()
+
         if self.isCamOn == True:
+            
             self.apply_mask()
             self.apply_transform()
             self.coordinates()
+
+            if self.goal:
+                if(self.check):
+                    print("first check")
+                    self.goal_previous = self.goal_position
+                    self.check = False
+                if (self.goal_position[0] == self.goal_previous[0]) and (self.goal_position[1] == self.goal_previous[1]):
+                    self.same_goal = True
 
             if (self.goal == False) and (self.thymio == False):
                 print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "both the Thymio robot and the goal were not detected")

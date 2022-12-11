@@ -73,13 +73,11 @@ class data(object):
                 iter = iter + 1
         else:
             self.speed_mms =self.speed_conversion * self.speed_y
-            self.show_data()
-            mc.speed_conversion = self.speed_conversion
+            self.show_data(mc)
             print("YOU ARE IN A 'NO CALIBRATION' MODE. IF YOU WISH TO RUN CALIBRATION SEQUENCE, CHANGE THE CELL ABOVE WITH THIS CODE\n")
             print(f"cal_data = data(Ts, SPEED_L, SPEED_R, GND_THRESHOLD, client, node)")
             print("cal_data.calibration_mm(mc)")
             print("########################")
-        self.calibrated = 0 
 
 
     def get_data(self, thymio_data):
@@ -94,12 +92,13 @@ class data(object):
         avg_speed = [(x["left_speed"]+x["right_speed"])/2/self.speed_conversion for x in thymio_data]
         self.q_nu = np.std(avg_speed[startIter:])/2
         self.r_nu = self.q_nu
-        self.calibrated = 1
-        self.show_data()
+        self.show_data(mc)
 
-    def show_data(self):
-        print(f"The conversion factor for the speed of the thymio to mm/sh is : {self.speed_conversion} ")
-        print(f"With a desired speed of : {self.speed_y}, the thymio speed is : {self.speed_mms} mm/s")
+    def show_data(self, mc):
+        self.calibrated = 1
+        speed_avg = (self.speed_y  + self.speed_x)/2
+        print(f"The conversion factor for the speed of the thymio to mm/s is : {self.speed_conversion} ")
+        print(f"With a desired speed of : {speed_avg}, the thymio speed is : {self.speed_mms} mm/s")
         print(f"The standard deviation from the speed state (q_nu) and speed measurement (r_nu) is : {self.q_nu} ")
         print("########################")
 

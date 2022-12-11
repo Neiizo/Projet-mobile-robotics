@@ -189,13 +189,13 @@ def djikstra_algo(data,start,goal):
     path = np.array(path).reshape(-1, 2).transpose()
     visitedNodes = np.array(visitedNodes).reshape(-1, 2).transpose()
 
-    # Displaying the map
-    fig_astar, ax_astar = create_empty_plot(size[0],size[1])
-    ax_astar.imshow(occupancy_grid.transpose(), cmap=cmap)
+    # # Displaying the map
+    # fig_astar, ax_astar = create_empty_plot(size[0],size[1])
+    # ax_astar.imshow(occupancy_grid.transpose(), cmap=cmap)
 
-    # Plot the best path found and the list of visited nodes
-    ax_astar.scatter(visitedNodes[0], visitedNodes[1], marker="o", color = 'orange');
-    ax_astar.plot(path[0], path[1], marker="o", color = 'blue');
-    ax_astar.scatter(start[0], start[1], marker="o", color = 'green', s=200);
-    ax_astar.scatter(goal[0], goal[1], marker="o", color = 'purple', s=200);
+    # # Plot the best path found and the list of visited nodes
+    # ax_astar.scatter(visitedNodes[0], visitedNodes[1], marker="o", color = 'orange');
+    # ax_astar.plot(path[0], path[1], marker="o", color = 'blue');
+    # ax_astar.scatter(start[0], start[1], marker="o", color = 'green', s=200);
+    # ax_astar.scatter(goal[0], goal[1], marker="o", color = 'purple', s=200);
     return path
