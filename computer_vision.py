@@ -25,7 +25,7 @@ class Vision:
         self.height = None          # height of the image
 
         self.offset = 10                    # offset to apply in order not to cut the robots on the border
-        self.y_offset = -55                 # due to our setup
+        self.y_offset = -45                 # due to our setup
         self.conversion_factor_x = None     # pixel to mm in x
         self.conversion_factor_y = None     # pixel to mm in y
 
@@ -64,19 +64,18 @@ class Vision:
         if not self.cap.isOpened():
             self.isCamOn = False
             print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + "could not open the video stream.")
-
+        ret = False
         # Getting a first frame for the width and height of the plot
         ret, frame = self.cap.read()
         
         if(not ret):
            self.isCamOn = False
+           f = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
+           frame = np.zeros_like(f)
            print("\033[31m" + "ERROR MESSAGE: " + "\033[00m" + " cannot receive frame.")
         else:
             self.isCamOn = True
-
-        # frame = cv2.imread('input/frame.png', cv2.IMREAD_COLOR)
-        
-        cv2.imwrite('input/frame.png', frame)
+            cv2.imwrite('input/frame.png', frame)
 
         self.img = frame.copy()
 
@@ -176,7 +175,6 @@ class Vision:
             hull = cv2.convexHull(contours[i])
             hull_list.append(hull)
 
-
         # compute rotated rectangle (minimum area)
         rect = cv2.minAreaRect(cnt)
         (x, y), (w, h), angle = rect
@@ -274,7 +272,6 @@ class Vision:
             cv2.line(lines, (self.offset + j*self.cellx, 0), (self.offset + j*self.cellx, 1500), (0,0,255),3)
 
         return lines
-
 
 
     def occupancy_grid(self):
