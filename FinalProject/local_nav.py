@@ -46,7 +46,7 @@ def obstacle_avoid(vision, mc, x,y, shortest_path, index, node, client):
     complete = False
     going_left = False
     wrong_move = False
-    Ts = 0.1
+    Ts = 0.01
     obj_x = shortest_path[0][index+1]
     obj_y = shortest_path[1][index+1]
     shortest_path_local = shortest_path 

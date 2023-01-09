@@ -93,8 +93,10 @@ class MotionControl(object):
         # computes required angle for the thymio to reach the next cells, and compares its actual angle. A proportionnal controller 
         # will then be used to correct this and redirect the thymio
         #####################################################
-        if(isCamOn):
-            return 0, 0
+        if(not isCamOn):
+            delta_x = next_target_x - kalman_pos[0]
+            delta_y = next_target_y - kalman_pos[1]
+            return delta_x, delta_y
         else:
             delta_x = next_target_x - kalman_pos[0]
             delta_y = next_target_y - kalman_pos[1]
